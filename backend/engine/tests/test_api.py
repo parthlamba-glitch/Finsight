@@ -353,9 +353,19 @@ class TestLiveSeededDatasetEndpoints:
 
     def test_seeded_user_overview(self):
         from backend.main import app
+        from backend.db import SessionLocal
+        from backend.models import User
+
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.email == "aarav.sharma@example.com").first()
+            user_id = user.id if user else 1
+        finally:
+            db.close()
+
         with TestClient(app) as live_client:
-            # Query demo user (user_id=1)
-            response = live_client.get("/overview?user_id=1")
+            # Query demo user
+            response = live_client.get(f"/overview?user_id={user_id}")
             assert response.status_code == 200
             data = response.json()
 
@@ -371,8 +381,18 @@ class TestLiveSeededDatasetEndpoints:
 
     def test_seeded_user_transactions(self):
         from backend.main import app
+        from backend.db import SessionLocal
+        from backend.models import User
+
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.email == "aarav.sharma@example.com").first()
+            user_id = user.id if user else 1
+        finally:
+            db.close()
+
         with TestClient(app) as live_client:
-            response = live_client.get("/transactions?user_id=1&period=this_month")
+            response = live_client.get(f"/transactions?user_id={user_id}&period=this_month")
             assert response.status_code == 200
             data = response.json()
 
@@ -382,8 +402,18 @@ class TestLiveSeededDatasetEndpoints:
 
     def test_seeded_user_goals_and_patch(self):
         from backend.main import app
+        from backend.db import SessionLocal
+        from backend.models import User
+
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.email == "aarav.sharma@example.com").first()
+            user_id = user.id if user else 1
+        finally:
+            db.close()
+
         with TestClient(app) as live_client:
-            response = live_client.get("/goals?user_id=1")
+            response = live_client.get(f"/goals?user_id={user_id}")
             assert response.status_code == 200
             goals = response.json()
             assert len(goals) >= 1
@@ -392,7 +422,7 @@ class TestLiveSeededDatasetEndpoints:
             # Test PATCH contribution
             patch_res = live_client.patch(
                 f"/goals/{emergency_goal['id']}",
-                json={"monthly_contribution": 15000.0, "user_id": 1},
+                json={"monthly_contribution": 15000.0, "user_id": user_id},
             )
             assert patch_res.status_code == 200
             data = patch_res.json()
@@ -403,5 +433,5 @@ class TestLiveSeededDatasetEndpoints:
             # Reset back to 10000 for idempotency
             live_client.patch(
                 f"/goals/{emergency_goal['id']}",
-                json={"monthly_contribution": 10000.0, "user_id": 1},
+                json={"monthly_contribution": 10000.0, "user_id": user_id},
             )

@@ -355,5 +355,22 @@ class PasskeyCredentialResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class DemoDepositRequest(BaseModel):
+    """Request payload for creating a development synthetic deposit."""
+    amount: Decimal = Field(..., gt=0, description="Deposit amount (positive Decimal)")
+    merchant_name: Optional[str] = Field("Demo Salary Deposit", description="Payer/Merchant display name")
+    description: Optional[str] = Field("Synthetic development deposit", description="Transaction description/note")
+    category: str = Field("Other", description="Transaction category (Other, Bills, Food, etc.)")
+    account_id: Optional[int] = Field(None, description="Optional target account ID (defaults to user's active account)")
+
+
+class DemoDepositResponse(BaseModel):
+    """Response model for demo deposit with authoritative balance."""
+    status: str = "success"
+    transaction: TransactionResponse
+    authoritative_balance: Decimal = Field(..., description="Authoritative balance calculated by the deterministic financial engine")
+
+
+
 
 

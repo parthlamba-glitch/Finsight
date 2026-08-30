@@ -230,6 +230,53 @@ FINSIGHT_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "payment_preview",
+            "description": (
+                "Preview a payment or money transfer to a recipient and stage it for user confirmation. "
+                "Select this when the user asks to send money, pay someone, or transfer funds to a person/vendor, "
+                "e.g. 'Send ₹5,000 to Dr Rao', 'Pay 500 to Electricity', 'Transfer 2000 to Amit'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "amount": {
+                        "type": "number",
+                        "description": "The positive monetary amount to send/pay.",
+                    },
+                    "recipient_name": {
+                        "type": "string",
+                        "description": "The name of the recipient, payee, or vendor (e.g. 'Dr Rao', 'Amit').",
+                    },
+                },
+                "required": ["amount", "recipient_name"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "payment_execute",
+            "description": (
+                "Confirm and execute a previously staged pending payment. "
+                "Select this when the user explicitly confirms, authorizes, or says yes to executing a pending payment, "
+                "e.g. 'Confirm payment', 'Yes, send it', 'Confirm payment 5', 'Authorize transaction'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "pending_payment_id": {
+                        "type": "string",
+                        "description": "The optional ID or confirmation token of the pending payment to execute.",
+                    },
+                },
+                "additionalProperties": False,
+            },
+        },
+    },
 ]
 
 SYSTEM_PROMPT = """You are FinSight's AI Intent Router.
@@ -300,11 +347,30 @@ Examples:
 - "have you noticed any patterns?"
 - "are there any spending trends I should know about?"
 
+6. payment_preview
+Meaning: Inquiries, requests, or commands to send money, pay someone, transfer funds to a person or vendor.
+Examples:
+- "Send ₹5,000 to Dr Rao"
+- "Pay ₹500 to Electricity"
+- "Transfer 2000 to Amit"
+- "Send 10k to Mom"
+- "Send ₹90,000 to Unknown Vendor"
+Note: Extract `amount` and `recipient_name`. If either is missing, request clarification.
+
+7. payment_execute
+Meaning: Explicit confirmation, authorization, or approval to execute a previously staged pending payment.
+Examples:
+- "Confirm payment"
+- "Yes, send it"
+- "Confirm transaction"
+- "Authorize payment"
+- "Execute payment"
+
 ==================================================
 PROTECT / SCAM SAFETY OPERATIONS
 ==================================================
 
-6. check_scam_message
+8. check_scam_message
 Meaning: Inquiries asking to evaluate, check, or verify whether a message, SMS, email, link, or notification is a scam, phishing attempt, fraudulent, or suspicious, OR when a user pastes a message for safety analysis.
 Examples:
 - "Is this a scam?"
@@ -321,7 +387,7 @@ Note: Extract the message parameter if present in the user's query. If the user 
 UI CONTROL & ACCESSIBILITY COMMANDS
 ==================================================
 
-7. sync_bank
+9. sync_bank
 Meaning: Voice or natural language commands asking to sync, refresh, or update connected bank accounts or feeds.
 Examples:
 - "Sync my bank"
@@ -331,7 +397,7 @@ Examples:
 - "Mera bank sync karo"
 - "Bank refresh karo"
 
-8. read_recent_transactions
+10. read_recent_transactions
 Meaning: Voice commands asking the system to read aloud, display, or list recent transactions.
 Examples:
 - "Read my recent transactions"
@@ -341,7 +407,7 @@ Examples:
 - "Recent transactions sunao"
 - "Show my recent transactions"
 
-9. read_goals
+11. read_goals
 Meaning: Voice commands asking to read aloud, display, or list active financial goals and progress.
 Examples:
 - "Read my goals"
@@ -351,7 +417,7 @@ Examples:
 - "Goals sunao"
 - "Show my goals"
 
-10. upload_document
+12. upload_document
 Meaning: Voice commands asking to open document upload, scan bank statements, or import statement files.
 Examples:
 - "Upload a document"
@@ -375,6 +441,8 @@ SUPPORTED_FUNCTIONS = {
     "check_affordability",
     "project_goal_completion",
     "get_insights",
+    "payment_preview",
+    "payment_execute",
     "check_scam_message",
     "sync_bank",
     "read_recent_transactions",
@@ -690,6 +758,53 @@ def route_query(
                     }
 
                 args["message"] = msg_text
+
+            # 5. payment_preview validation & context handling
+            elif func_name == "payment_preview":
+                raw_amount = args.get("amount") or context.get("parameters", {}).get("amount")
+                amount = _parse_amount_value(raw_amount)
+                recipient = (
+                    args.get("recipient_name")
+                    or context.get("parameters", {}).get("recipient_name")
+                    or ""
+                ).strip()
+
+                if not amount or amount <= 0:
+                    clean_params = {"recipient_name": recipient} if recipient else {}
+                    return {
+                        "status": "clarification_needed",
+                        "question": "How much would you like to send?",
+                        "intent": "payment_preview",
+                        "extracted_parameters": clean_params,
+                        "missing_parameters": ["amount"],
+                    }
+
+                if not recipient:
+                    clean_params = {"amount": amount}
+                    return {
+                        "status": "clarification_needed",
+                        "question": "Who would you like to send this payment to?",
+                        "intent": "payment_preview",
+                        "extracted_parameters": clean_params,
+                        "missing_parameters": ["recipient_name"],
+                    }
+
+                args["amount"] = amount
+                args["recipient_name"] = recipient
+
+            # 6. payment_execute resolution
+            elif func_name == "payment_execute":
+                pending_id = (
+                    args.get("pending_payment_id")
+                    or args.get("confirmation_token")
+                    or context.get("confirmation_token")
+                    or context.get("pending_payment_id")
+                    or context.get("parameters", {}).get("pending_payment_id")
+                    or context.get("parameters", {}).get("confirmation_token")
+                )
+                if pending_id is not None:
+                    args["pending_payment_id"] = str(pending_id)
+                    args["confirmation_token"] = str(pending_id)
 
             # Inject user_id into arguments via Python (never generated by LLM)
             args["user_id"] = user_id

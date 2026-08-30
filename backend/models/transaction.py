@@ -45,6 +45,8 @@ VALID_SOURCES: Set[str] = {
     "voice",
     "payment",
     "manual",
+    "demo",
+    "synthetic",
 }
 
 

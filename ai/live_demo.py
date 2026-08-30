@@ -79,11 +79,11 @@ def build_dynamic_mock_router(query: str, context: Optional[Dict[str, Any]] = No
                 or "goal" in q_lower
                 or "my" in q_lower
             ):
-                goal_name = "emergency fund"
+                goal_name = "Emergency Fund"
                 if "vacation" in q_lower:
-                    goal_name = "vacation"
+                    goal_name = "Vacation"
                 elif "savings goal" in q_lower:
-                    goal_name = "savings goal"
+                    goal_name = "Savings Goal"
                 mock_tool_call = MagicMock()
                 mock_tool_call.function.name = "project_goal_completion"
                 mock_tool_call.function.arguments = json.dumps({"goal_name": goal_name})
@@ -107,8 +107,55 @@ def build_dynamic_mock_router(query: str, context: Optional[Dict[str, Any]] = No
             mock_client.chat.completions.create.return_value = mock_response
             return mock_client
 
-    # 0. Scam & Fraud Safety Checker (PROTECT)
+    # 0. Payment Confirmation / Execute
     if (
+        "confirm payment" in q_lower
+        or "yes, confirm" in q_lower
+        or "confirm transaction" in q_lower
+        or "authorize payment" in q_lower
+        or "execute payment" in q_lower
+        or (q_lower.strip() in ("confirm", "yes", "authorize") and (ctx.get("status") == "awaiting_confirmation" or ctx.get("confirmation_token") or ctx.get("pending_payment_id")))
+    ):
+        pending_id = ctx.get("confirmation_token") or ctx.get("pending_payment_id") or "1"
+        mock_tool_call = MagicMock()
+        mock_tool_call.function.name = "payment_execute"
+        mock_tool_call.function.arguments = json.dumps({"pending_payment_id": str(pending_id), "confirmation_token": str(pending_id)})
+        mock_message.tool_calls = [mock_tool_call]
+        mock_message.content = None
+
+    # 0.5 Payment Preview
+    elif (
+        "send " in q_lower
+        or "pay " in q_lower
+        or "transfer " in q_lower
+    ) and not ("what did i spend" in q_lower or "how much did i spend" in q_lower or "why did i spend" in q_lower or "spending" in q_lower):
+        amount = _parse_amount_value(query)
+        recipient = "Recipient"
+        to_match = re.search(r"\bto\s+([A-Za-z0-9\s\.\_]+?)(?:\?|$|\.|\,)", query, re.IGNORECASE)
+        if to_match:
+            recipient = to_match.group(1).strip()
+        elif "dr rao" in q_lower:
+            recipient = "Dr Rao"
+        elif "unknown vendor" in q_lower:
+            recipient = "Unknown Vendor"
+        elif "rahul" in q_lower:
+            recipient = "Rahul"
+        elif "merchant" in q_lower:
+            recipient = "Merchant"
+
+        mock_tool_call = MagicMock()
+        mock_tool_call.function.name = "payment_preview"
+        args = {}
+        if amount and amount > 0:
+            args["amount"] = amount
+        if recipient:
+            args["recipient_name"] = recipient
+        mock_tool_call.function.arguments = json.dumps(args)
+        mock_message.tool_calls = [mock_tool_call]
+        mock_message.content = None
+
+    # 1. Scam & Fraud Safety Checker (PROTECT)
+    elif (
         "scam" in q_lower
         or "fraud" in q_lower
         or "suspicious" in q_lower
@@ -157,26 +204,6 @@ def build_dynamic_mock_router(query: str, context: Optional[Dict[str, Any]] = No
             mock_message.tool_calls = [mock_tool_call]
             mock_message.content = None
 
-    # 1. Insights / Trends / Why / Anomalies
-    elif (
-        "why" in q_lower
-        or "insight" in q_lower
-        or "trend" in q_lower
-        or "pattern" in q_lower
-        or "unusual" in q_lower
-        or "what changed" in q_lower
-        or "what's changed" in q_lower
-        or "weird" in q_lower
-        or "spike" in q_lower
-        or "noticed about my spending" in q_lower
-    ):
-
-        mock_tool_call = MagicMock()
-        mock_tool_call.function.name = "get_insights"
-        mock_tool_call.function.arguments = json.dumps({})
-        mock_message.tool_calls = [mock_tool_call]
-        mock_message.content = None
-
     # 2. Affordability
     elif (
         "afford" in q_lower
@@ -189,21 +216,17 @@ def build_dynamic_mock_router(query: str, context: Optional[Dict[str, Any]] = No
         or "would a " in q_lower
         or "would buying" in q_lower
         or "affect my finances" in q_lower
-        or ("spend" in q_lower and ("can i" in q_lower or "should i" in q_lower or "would" in q_lower or "enough for" in q_lower or "okay if" in q_lower or "want to spend" in q_lower))
     ):
         amount = _parse_amount_value(query)
+        mock_tool_call = MagicMock()
+        mock_tool_call.function.name = "check_affordability"
+        args = {}
         if amount and amount > 0:
-            mock_tool_call = MagicMock()
-            mock_tool_call.function.name = "check_affordability"
-            mock_tool_call.function.arguments = json.dumps({"amount": amount, "item_description": "item"})
-            mock_message.tool_calls = [mock_tool_call]
-            mock_message.content = None
-        else:
-            mock_tool_call = MagicMock()
-            mock_tool_call.function.name = "check_affordability"
-            mock_tool_call.function.arguments = json.dumps({})
-            mock_message.tool_calls = [mock_tool_call]
-            mock_message.content = None
+            args["amount"] = amount
+            args["item_description"] = "item"
+        mock_tool_call.function.arguments = json.dumps(args)
+        mock_message.tool_calls = [mock_tool_call]
+        mock_message.content = None
 
     # 3. Goals
     elif (
@@ -217,11 +240,11 @@ def build_dynamic_mock_router(query: str, context: Optional[Dict[str, Any]] = No
         or "finish that" in q_lower
         or "finish my" in q_lower
     ):
-        goal_name = "emergency fund"
+        goal_name = "Emergency Fund"
         if "vacation" in q_lower:
-            goal_name = "vacation"
+            goal_name = "Vacation"
         elif "savings goal" in q_lower:
-            goal_name = "savings goal"
+            goal_name = "Savings Goal"
         mock_tool_call = MagicMock()
         mock_tool_call.function.name = "project_goal_completion"
         mock_tool_call.function.arguments = json.dumps({"goal_name": goal_name})
@@ -229,11 +252,32 @@ def build_dynamic_mock_router(query: str, context: Optional[Dict[str, Any]] = No
         mock_message.content = None
 
     elif "save" in q_lower and ("how much longer" in q_lower or "how long" in q_lower):
-        # Goal omitted -> request clarification
-        mock_message.tool_calls = None
-        mock_message.content = "Which savings goal would you like to check?"
+        mock_tool_call = MagicMock()
+        mock_tool_call.function.name = "project_goal_completion"
+        mock_tool_call.function.arguments = json.dumps({})
+        mock_message.tool_calls = [mock_tool_call]
+        mock_message.content = None
 
-    # 4. Spending Summary
+    # 4. Insights / Trends / Why / Anomalies
+    elif (
+        "why" in q_lower
+        or "insight" in q_lower
+        or "trend" in q_lower
+        or "pattern" in q_lower
+        or "unusual" in q_lower
+        or "what changed" in q_lower
+        or "what's changed" in q_lower
+        or "weird" in q_lower
+        or "spike" in q_lower
+        or "noticed about my spending" in q_lower
+    ):
+        mock_tool_call = MagicMock()
+        mock_tool_call.function.name = "get_insights"
+        mock_tool_call.function.arguments = json.dumps({})
+        mock_message.tool_calls = [mock_tool_call]
+        mock_message.content = None
+
+    # 5. Spending Summary
     elif (
         "spend" in q_lower
         or "spent" in q_lower
@@ -248,7 +292,7 @@ def build_dynamic_mock_router(query: str, context: Optional[Dict[str, Any]] = No
         or "expense" in q_lower
         or "what have i been" in q_lower
     ):
-        category = "food" if "food" in q_lower else None
+        category = "Food" if "food" in q_lower else None
         period = "last_month" if "last month" in q_lower else "this_month"
         args = {"period": period}
         if category:
@@ -259,7 +303,7 @@ def build_dynamic_mock_router(query: str, context: Optional[Dict[str, Any]] = No
         mock_message.tool_calls = [mock_tool_call]
         mock_message.content = None
 
-    # 5. Balance & Funds
+    # 6. Balance & Funds
     elif (
         "balance" in q_lower
         or "how much money" in q_lower
@@ -279,6 +323,7 @@ def build_dynamic_mock_router(query: str, context: Optional[Dict[str, Any]] = No
         or "what i got" in q_lower
         or "see in my account" in q_lower
         or "check my funds" in q_lower
+        or "check balance" in q_lower
     ):
         mock_tool_call = MagicMock()
         mock_tool_call.function.name = "get_balance"
@@ -286,7 +331,7 @@ def build_dynamic_mock_router(query: str, context: Optional[Dict[str, Any]] = No
         mock_message.tool_calls = [mock_tool_call]
         mock_message.content = None
 
-    # 6. UI Control: sync_bank
+    # 7. UI Control: sync_bank
     elif (
         "sync" in q_lower
         or "refresh my account" in q_lower
@@ -303,7 +348,7 @@ def build_dynamic_mock_router(query: str, context: Optional[Dict[str, Any]] = No
         mock_message.tool_calls = [mock_tool_call]
         mock_message.content = None
 
-    # 7. UI Control: read_recent_transactions
+    # 8. UI Control: read_recent_transactions
     elif (
         ("read" in q_lower and "transaction" in q_lower)
         or "recent transaction" in q_lower
@@ -321,7 +366,7 @@ def build_dynamic_mock_router(query: str, context: Optional[Dict[str, Any]] = No
         mock_message.tool_calls = [mock_tool_call]
         mock_message.content = None
 
-    # 8. UI Control: read_goals
+    # 9. UI Control: read_goals
     elif (
         ("read" in q_lower and "goal" in q_lower)
         or "tell me my goal" in q_lower
@@ -338,7 +383,7 @@ def build_dynamic_mock_router(query: str, context: Optional[Dict[str, Any]] = No
         mock_message.tool_calls = [mock_tool_call]
         mock_message.content = None
 
-    # 9. UI Control: upload_document
+    # 10. UI Control: upload_document
     elif (
         ("upload" in q_lower and ("document" in q_lower or "statement" in q_lower or "file" in q_lower or "bank statement" in q_lower))
         or ("scan" in q_lower and ("statement" in q_lower or "document" in q_lower))
@@ -353,7 +398,6 @@ def build_dynamic_mock_router(query: str, context: Optional[Dict[str, Any]] = No
         mock_message.content = None
 
     else:
-        # Off-topic / non-financial / ambiguous query
         mock_message.tool_calls = None
         mock_message.content = "I am FinSight, your personal finance assistant. I can only assist with personal financial inquiries."
 
@@ -374,27 +418,39 @@ def build_dynamic_mock_explainer(engine_result: Any, query: str) -> MagicMock:
 
     q_lower = query.lower()
 
-    if isinstance(engine_result, dict) and "balance" in engine_result:
+    if isinstance(engine_result, dict) and engine_result.get("intent") == "payment_preview":
+        amt = engine_result.get("amount", Decimal("0.00"))
+        rec = engine_result.get("recipient_name", "Recipient")
+        if engine_result.get("fraud_warning") or engine_result.get("risk_level") == "high":
+            reasons = engine_result.get("risk_reasons", ["High-risk payment detected"])
+            reason_str = "; ".join(reasons) if isinstance(reasons, list) else str(reasons)
+            text = f"Warning: High risk payment detected. {reason_str}. Would you like to proceed with sending ₹{amt:,.2f} to {rec}?"
+        else:
+            text = f"Payment preview prepared. Would you like to send ₹{amt:,.2f} to {rec}?"
+
+    elif isinstance(engine_result, dict) and engine_result.get("intent") == "payment_execute":
+        amt = engine_result.get("amount", Decimal("0.00"))
+        rec = engine_result.get("recipient_name", "Recipient")
+        bal = engine_result.get("new_balance", Decimal("0.00"))
+        text = f"Payment of ₹{amt:,.2f} to {rec} was successfully completed. Your new balance is ₹{bal:,.2f}."
+
+    elif isinstance(engine_result, dict) and "balance" in engine_result:
         bal = engine_result["balance"]
         if "running low" in q_lower or "low on money" in q_lower:
             text = f"Your current balance is ₹{bal:,.2f} as of today. I don't have a defined threshold for what counts as running low."
         else:
-            text = f"Your current account balance is ₹{bal:,.2f} as of today."
+            text = f"Your authoritative balance is ₹{bal:,.2f}."
 
     elif isinstance(engine_result, dict) and "by_category" in engine_result:
         by_cat = engine_result["by_category"]
         vs_last = engine_result.get("vs_last_period_pct", {})
         period = engine_result.get("period", "this_month")
         period_label = "last month" if period == "last_month" else "this month"
-        if "food" in q_lower:
-            food_amt = by_cat.get("Food", Decimal("0.00"))
-            food_pct = vs_last.get("Food", Decimal("0.00"))
-            if period == "last_month":
-                text = f"You spent a total of ₹{food_amt:,.2f} on Food last month."
-            else:
-                text = f"You have spent a total of ₹{food_amt:,.2f} on Food this month, which is {food_pct}% higher compared to your last period."
+        if "food" in q_lower or (isinstance(by_cat, dict) and "Food" in by_cat and len(by_cat) == 1):
+            food_amt = by_cat.get("Food", Decimal("0.00")) if isinstance(by_cat, dict) else Decimal("0.00")
+            text = f"You spent ₹{food_amt:,.2f} on Food {period_label}."
         else:
-            tot = engine_result["total"]
+            tot = engine_result.get("total", Decimal("0.00"))
             text = f"Your total spending {period_label} is ₹{tot:,.2f}."
 
     elif isinstance(engine_result, dict) and "can_afford" in engine_result:
@@ -408,13 +464,23 @@ def build_dynamic_mock_explainer(engine_result: Any, query: str) -> MagicMock:
 
     elif isinstance(engine_result, dict) and "current_months_remaining" in engine_result:
         months = engine_result["current_months_remaining"]
-        text = f"You are on track to complete your Emergency Fund goal in {months} months."
+        goal_name = engine_result.get("goal_name", "Emergency Fund")
+        text = f"You are on track to complete your {goal_name} in {months} month(s)."
 
     elif isinstance(engine_result, list) and len(engine_result) > 0:
         first_insight = engine_result[0]
         cat = first_insight.get("category", "spending")
         pct = first_insight.get("pct", "0")
         text = f"Your {cat.lower()} spending increased by {pct}% this month."
+
+    elif isinstance(engine_result, dict) and "insights" in engine_result:
+        ins = engine_result["insights"]
+        if ins and len(ins) > 0:
+            first = ins[0]
+            cat = first.get("category", "spending")
+            text = f"Your {cat.lower()} spending has shown notable patterns."
+        else:
+            text = "No unusual spending patterns or anomalies detected."
 
     else:
         text = "I don't have that information available."
@@ -424,6 +490,8 @@ def build_dynamic_mock_explainer(engine_result: Any, query: str) -> MagicMock:
     mock_response.choices = [mock_choice]
     mock_client.chat.completions.create.return_value = mock_response
     return mock_client
+
+
 
 
 def process_query(question: str, user_id: int, db: SessionLocal) -> None:
@@ -497,39 +565,15 @@ def process_query(question: str, user_id: int, db: SessionLocal) -> None:
     print(func_name)
     print()
 
-    # Dispatch to real engine
-    if func_name == "get_balance":
-        passed_args = {"user_id": user_id}
-        engine_result = real_engine.get_balance(user_id=user_id, db=db)
+    # Dispatch to deterministic backend engine via dispatcher
+    from backend.engine.dispatcher import dispatch_intent
 
-    elif func_name == "get_spending_summary":
-        period = args.get("period", "this_month")
-        passed_args = {"user_id": user_id, "period": period}
-        engine_result = real_engine.get_spending_summary(user_id=user_id, db=db, period=period)
-
-    elif func_name == "check_affordability":
-        amount = args.get("amount")
-        passed_args = {"user_id": user_id, "amount": amount}
-        engine_result = real_engine.check_affordability(user_id=user_id, amount=amount, db=db)
-
-    elif func_name == "project_goal_completion":
-        goal_id = args.get("goal_id")
-        goal_name = args.get("goal_name") or args.get("goal_name_or_id")
-        if not goal_id and goal_name:
-            from ai.pipeline import resolve_goal_id_from_db
-            goal_id = resolve_goal_id_from_db(user_id, goal_name, db)
-
-        hypo = args.get("hypothetical_contribution")
-        passed_args = {"goal_id": goal_id, "hypothetical_contribution": hypo}
-        engine_result = real_engine.project_goal_completion(goal_id=goal_id, db=db, hypothetical_contribution=hypo)
-
-    elif func_name == "get_insights":
-        passed_args = {"user_id": user_id}
-        engine_result = real_engine.get_insights(user_id=user_id, db=db)
-
-    else:
-        passed_args = {}
-        engine_result = {"status": "error", "message": f"Unsupported function: {func_name}"}
+    engine_result = dispatch_intent(
+        user_id=user_id,
+        intent_data={"intent": func_name, "arguments": args},
+        db=db,
+    )
+    passed_args = args
 
     print("ARGUMENTS:")
     print(json.dumps(passed_args, cls=FinancialDataJSONEncoder, indent=2))

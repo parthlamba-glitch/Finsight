@@ -4,6 +4,7 @@ Transactions Router for FinSight.
 Provides transaction history, voice transaction ingestion, and statement candidate confirmation.
 """
 
+import os
 from typing import List, Dict, Optional
 from decimal import Decimal
 from fastapi import APIRouter, Depends, Query, HTTPException, status
@@ -22,6 +23,8 @@ from backend.schemas import (
     ConfirmTransactionsRequest,
     ConfirmTransactionsResponse,
     SkippedTransactionItem,
+    DemoDepositRequest,
+    DemoDepositResponse,
 )
 from backend.ingestion.normalizer import normalize_transaction_input
 from backend.ingestion.deduplicator import is_duplicate_transaction
@@ -271,4 +274,117 @@ def confirm_statement_transactions(
         transactions=tx_responses,
         skipped_items=skipped_items,
     )
+
+
+@router.post(
+    "/transactions/demo-deposit",
+    response_model=DemoDepositResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create Development Synthetic Deposit (Demo Mode Only)",
+)
+@router.post(
+    "/api/v1/transactions/demo-deposit",
+    response_model=DemoDepositResponse,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
+)
+@router.post(
+    "/demo/deposit",
+    response_model=DemoDepositResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create Development Synthetic Deposit (Direct Route)",
+)
+def create_demo_deposit(
+    payload: DemoDepositRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> DemoDepositResponse:
+    """
+    DEVELOPMENT-ONLY synthetic deposit endpoint allowing developers and testers
+    to fund a newly registered user account starting at ₹0.
+
+    Security & Architectural Guarantees:
+    1. Gated strictly behind environment variable `FINSIGHT_DEMO_MODE=true`.
+       Returns 403 Forbidden if demo mode is not enabled.
+    2. Authenticated user ID is strictly derived from the validated JWT (`current_user.id`).
+       Any client-side user_id is never accepted or authoritative.
+    3. Normalizes input and creates a Transaction with `transaction_type='income'` and `source='demo'`.
+    4. Calculates the resulting balance dynamically using the deterministic `financial_engine.get_balance()`.
+    """
+    # 1. Environment Gate Verification
+    demo_mode_enabled = os.getenv("FINSIGHT_DEMO_MODE", "").strip().lower() in ("true", "1", "yes", "enabled")
+    if not demo_mode_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Demo deposit endpoint is disabled in this environment. Set FINSIGHT_DEMO_MODE=true to enable development deposits.",
+        )
+
+    authoritative_user_id = current_user.id
+
+    # 2. Resolve target account belonging to current_user
+    if payload.account_id:
+        account = (
+            db.query(Account)
+            .filter(Account.id == payload.account_id, Account.user_id == authoritative_user_id)
+            .first()
+        )
+        if not account:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Account with id {payload.account_id} not found for authenticated user.",
+            )
+    else:
+        account = (
+            db.query(Account)
+            .filter(Account.user_id == authoritative_user_id, Account.is_active == True)
+            .first()
+        )
+        if not account:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No active account found for user {authoritative_user_id}.",
+            )
+
+    # 3. Validate and normalize transaction input using standard ingestion normalizer
+    try:
+        normalized = normalize_transaction_input(
+            amount=payload.amount,
+            transaction_type="income",
+            category=payload.category,
+            merchant_name=payload.merchant_name,
+            description=payload.description,
+            source="demo",
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    # 4. Insert Transaction record (source='demo')
+    tx = Transaction(
+        account_id=account.id,
+        user_id=authoritative_user_id,
+        amount=normalized["amount"],
+        currency="INR",
+        transaction_type="income",
+        category=normalized["category"],
+        merchant_name=normalized["merchant_name"],
+        description=normalized["description"],
+        source="demo",
+        reference_id=None,
+        transaction_date=normalized["transaction_date"],
+        is_suspicious=False,
+    )
+    db.add(tx)
+    db.commit()
+    db.refresh(tx)
+
+    # 5. Authoritative balance calculated dynamically by deterministic financial engine
+    balance_info = get_balance(authoritative_user_id, db)
+    authoritative_balance = balance_info["balance"]
+
+    return DemoDepositResponse(
+        status="success",
+        transaction=TransactionResponse.model_validate(tx),
+        authoritative_balance=authoritative_balance,
+    )
+
 
