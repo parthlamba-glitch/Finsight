@@ -1,0 +1,119 @@
+# ================================
+# FinSight - Root .gitignore
+# ================================
+
+# ---------- Environment / Secrets ----------
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ---------- Testing / Coverage ----------
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+
+# ---------- SQLite / Local Databases ----------
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# ---------- Logs / Temporary Files ----------
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+
+# ---------- Node / Frontend ----------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vite / frontend builds
+frontend/dist/
+frontend/.vite/
+
+# ---------- IDE / Editors ----------
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+.idea/
+*.iml
+
+# Antigravity / Gemini local workspace
+.gemini/
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ---------- Python tooling ----------
+.mypy_cache/
+.pyre/
+.ruff_cache/
+.pytype/
+
+# ---------- Jupyter ----------
+.ipynb_checkpoints/
+
+# ---------- Generated files ----------
+*.pid
+*.seed
+*.pid.lock
+
+# ---------- Local test artifacts ----------
+test-results/
+playwright-report/
+blob-report/
+
+# ---------- Frontend environment ----------
+frontend/.env
+frontend/.env.local
+frontend/.env.development
+frontend/.env.production
+frontend/.env.test
+
+# Keep examples
+!frontend/.env.example
+
+# ---------- AI local artifacts ----------
+ai/.pytest_cache/
+ai/__pycache__/
+
+# ---------- Backend local artifacts ----------
+backend/__pycache__/
+backend/.pytest_cache/
+
+# ---------- OS / Explorer ----------
+$RECYCLE.BIN/
