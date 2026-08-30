@@ -1,0 +1,60 @@
+/* src/styles/accessibility.css */
+
+/* Screen reader only class - visually hides elements but keeps them accessible to screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Ensure all interactive elements have a clear, highly visible focus ring */
+:focus-visible {
+  outline: 3px solid var(--color-focus, #3b82f6);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Remove default focus if focus-visible is supported to avoid double outlines */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Ensure high contrast text */
+body {
+  color: var(--color-text, #111827);
+  background-color: var(--color-bg, #f9fafb);
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    color: var(--color-text-dark, #f9fafb);
+    background-color: var(--color-bg-dark, #111827);
+  }
+}
+
+/* Make touch targets large enough for easy tapping (minimum 44x44px for accessibility) */
+button, 
+a, 
+input, 
+select, 
+textarea {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Disable hover-only functionality - anything hoverable must be focusable or clickable */
+/* Use smooth animations that respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

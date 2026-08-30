@@ -1,0 +1,254 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import './styles/accessibility.css';
+
+:root {
+  /* Color System - Forest Theme */
+  --color-bg: #0E1B17;           /* Forest Black */
+  --color-surface: #172823;      /* Deep Forest */
+  --color-surface-elevated: #20352E; /* Forest Slate */
+  
+  --color-text: #F5F2E8;         /* Warm Ivory */
+  --color-text-muted: #B8C5BE;   /* Soft Sage */
+  
+  --color-primary: #8FD694;      /* Fresh Sage */
+  --color-primary-dark: #4F8A68; /* Deep Sage */
+  
+  --color-border: #30443C;       /* Muted Forest */
+  
+  --color-warning: #E6B85C;      /* Warm Amber */
+  --color-error: #D96C6C;        /* Soft Red */
+  --color-success: #8FD694;      /* Fresh Sage */
+
+  /* Typography Scales - Desktop Default */
+  --font-hero: 64px;
+  --font-page-heading: 36px;
+  --font-section-heading: 24px;
+  --font-card-heading: 18px;
+  --font-body: 16px;
+  --font-secondary: 14px;
+}
+
+@media (max-width: 768px) {
+  :root {
+    /* Typography Scales - Mobile */
+    --font-hero: 40px;
+    --font-page-heading: 28px;
+    --font-section-heading: 21px;
+    --font-body: 16px;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+  cursor: pointer; /* Interaction wall everywhere */
+}
+
+/* Typography Elements */
+h1, h2, h3, h4, p {
+  margin: 0;
+}
+
+.text-hero { font-size: var(--font-hero); font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
+.text-page-heading { font-size: var(--font-page-heading); font-weight: 600; letter-spacing: -0.01em; }
+.text-section-heading { font-size: var(--font-section-heading); font-weight: 500; }
+.text-card-heading { font-size: var(--font-card-heading); font-weight: 500; }
+.text-body { font-size: var(--font-body); }
+.text-secondary { font-size: var(--font-secondary); color: var(--color-text-muted); }
+
+/* Layout Primitives */
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.flex-col { display: flex; flex-direction: column; }
+.flex-row { display: flex; flex-direction: row; }
+.flex-center { align-items: center; justify-content: center; }
+.gap-2 { gap: 0.5rem; }
+.gap-4 { gap: 1rem; }
+.gap-6 { gap: 1.5rem; }
+.gap-8 { gap: 2rem; }
+
+/* Design Language - Cards */
+.card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  padding: 1.5rem;
+}
+
+.card-elevated {
+  background-color: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  padding: 1.5rem;
+}
+
+/* Design Language - Buttons */
+.btn {
+  background-color: var(--color-primary);
+  color: var(--color-bg);
+  border: none;
+  border-radius: 12px;
+  padding: 14px 20px;
+  min-height: 48px;
+  font-size: var(--font-body);
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn:hover:not(:disabled) {
+  background-color: var(--color-primary-dark);
+  color: var(--color-text);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-surface-elevated);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Forms */
+input, select, textarea {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 14px;
+  font-size: var(--font-body);
+  font-family: inherit;
+  width: 100%;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(143, 214, 148, 0.2);
+}
+
+/* Utilities */
+.color-primary { color: var(--color-primary); }
+.color-warning { color: var(--color-warning); }
+.color-error { color: var(--color-error); }
+.color-success { color: var(--color-success); }
+.color-muted { color: var(--color-text-muted); }
+
+/* Minimal Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+/* Login Page Responsive Layout */
+.login-container {
+  min-height: 100vh;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.login-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.login-content {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-evenly;
+  flex-grow: 1;
+  gap: 2rem;
+  margin: 2rem 0;
+}
+
+.login-text-area {
+  max-width: 500px;
+}
+
+.login-card-area {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 450px;
+}
+
+.login-footer {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .login-container {
+    padding: 1.5rem 1rem;
+  }
+  
+  .login-content {
+    flex-direction: column-reverse; /* Puts the card above the text */
+    justify-content: center;
+    gap: 2.5rem;
+  }
+  
+  .login-text-area {
+    text-align: center;
+  }
+  
+  .login-text-area .text-hero {
+    font-size: 24px; /* Small font for mobile as requested */
+    margin-bottom: 0.5rem !important;
+  }
+  
+  .login-text-area .text-body {
+    font-size: 14px; /* Small font for mobile as requested */
+  }
+  
+  .login-footer {
+    gap: 1.5rem;
+    font-size: 0.8rem;
+  }
+}
+
