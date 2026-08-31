@@ -10,7 +10,8 @@
  * 4. Passwords and biometric templates are never stored or exposed.
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const RAW_API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
+const API_BASE = RAW_API_BASE ? RAW_API_BASE.replace(/\/+$/, '') : '';
 const TOKEN_STORAGE_KEY = 'finsight_access_token';
 
 let unauthorizedHandler = null;
@@ -53,7 +54,8 @@ export const tokenStorage = {
  * Core authenticated HTTP request helper.
  */
 async function request(endpoint, options = {}) {
-  const url = `${API_BASE}${endpoint}`;
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${API_BASE}${cleanEndpoint}`;
   const headers = {
     'Content-Type': 'application/json',
     ...(options.headers || {}),

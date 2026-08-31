@@ -4,15 +4,50 @@ FinSight Backend Application Entrypoint.
 Accessibility-First, Voice-First Financial Copilot.
 """
 
+import sys
+from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
+
+# Ensure repository root and backend directory are in sys.path for monorepo imports
+_BACKEND_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _BACKEND_DIR.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+if str(_BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_DIR))
+
 from fastapi import FastAPI, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from backend.db import get_db, init_db
 from backend.routers import auth, dashboard, transactions, goals, bank, statements, ai, payments
+
+
+class PrefixStrippingMiddleware:
+    """
+    ASGI middleware that transparently strips the '/svc/api' prefix if preserved by
+    upstream rewrites/proxies, routing directly to the standard FastAPI routes (/auth, /overview, etc.).
+    """
+
+    def __init__(self, app: ASGIApp, prefix: str = "/svc/api"):
+        self.app = app
+        self.prefix = prefix
+        self.prefix_bytes = prefix.encode("ascii")
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] in ("http", "websocket"):
+            path = scope.get("path", "")
+            if path.startswith(self.prefix):
+                scope = dict(scope)
+                scope["path"] = path[len(self.prefix):] or "/"
+                raw_path = scope.get("raw_path")
+                if raw_path and raw_path.startswith(self.prefix_bytes):
+                    scope["raw_path"] = raw_path[len(self.prefix_bytes):] or b"/"
+        await self.app(scope, receive, send)
 
 
 @asynccontextmanager
@@ -28,6 +63,9 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# Prefix stripping middleware for upstream /svc/api routing
+app.add_middleware(PrefixStrippingMiddleware, prefix="/svc/api")
 
 # CORS middleware for frontend communication
 app.add_middleware(
@@ -47,7 +85,6 @@ app.include_router(bank.router)
 app.include_router(statements.router)
 app.include_router(ai.router)
 app.include_router(payments.router)
-
 
 
 @app.get("/health", status_code=status.HTTP_200_OK, tags=["Health"])
@@ -74,3 +111,4 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=True)
+
