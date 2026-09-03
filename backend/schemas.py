@@ -246,6 +246,13 @@ class AskResponse(BaseModel):
     conversation_id: Optional[str] = Field(None, description="Conversation session ID")
 
 
+class TranscribeResponse(BaseModel):
+    """Response model returning verbatim speech transcription."""
+    status: str = Field("success", description="Transcription status")
+    transcript: str = Field(..., description="Verbatim transcribed speech text")
+    language: Optional[str] = Field("en", description="Detected or requested language code")
+
+
 class PaymentPreviewRequest(BaseModel):
     """Request payload to preview a payment without creating transactions."""
     amount: Decimal = Field(..., gt=0, description="Payment amount (positive Decimal)")

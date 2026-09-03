@@ -57,9 +57,11 @@ async function request(endpoint, options = {}) {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = `${API_BASE}${cleanEndpoint}`;
   const headers = {
-    'Content-Type': 'application/json',
     ...(options.headers || {}),
   };
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   const token = tokenStorage.getToken();
   if (token) {
@@ -437,5 +439,25 @@ export const api = {
       recommended_actions: Array.isArray(facts.recommended_actions) ? facts.recommended_actions : [],
       limitations: facts.limitations || 'This is an AI pattern-based safety assessment.',
     };
+  },
+
+  /**
+   * Transcribes recorded user audio to verbatim text via /voice/transcribe.
+   *
+   * Architectural invariant: Pure STT. Never executes calculations or alters data.
+   */
+  async transcribeVoice(audioBlob, filename = 'recording.webm', language = null) {
+    if (!audioBlob) {
+      throw new Error('No audio data provided for transcription.');
+    }
+    const formData = new FormData();
+    formData.append('audio', audioBlob, filename);
+    if (language) {
+      formData.append('language', language);
+    }
+    return request('/voice/transcribe', {
+      method: 'POST',
+      body: formData,
+    });
   },
 };

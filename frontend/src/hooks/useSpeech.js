@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { api } from '../services/api';
 
 export function useSpeech(onResult) {
   const [isListening, setIsListening] = useState(false);
@@ -59,27 +60,47 @@ export function useSpeech(onResult) {
         console.error("Already listening", e);
       }
     } else {
-      // Fallback for browsers that don't support it natively (Firefox, Brave)
+      // Fallback for browsers that don't support it natively (Firefox, Brave) or for backend STT
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorderRef.current = new MediaRecorder(stream);
+        const audioChunks = [];
+        const mimeType = (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported('audio/webm'))
+          ? 'audio/webm'
+          : 'audio/wav';
+        mediaRecorderRef.current = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
         
+        mediaRecorderRef.current.ondataavailable = (event) => {
+          if (event.data && event.data.size > 0) {
+            audioChunks.push(event.data);
+          }
+        };
+
         mediaRecorderRef.current.onstart = () => {
           setIsListening(true);
         };
         
-        mediaRecorderRef.current.onstop = () => {
+        mediaRecorderRef.current.onstop = async () => {
           setIsListening(false);
           setIsProcessing(true);
           
           // Stop all audio tracks to release the mic
           stream.getTracks().forEach(track => track.stop());
           
-          setTimeout(() => {
-            if (onResultRef.current) {
-              onResultRef.current("Is this message a scam?"); 
+          try {
+            const audioBlob = new Blob(audioChunks, { type: mimeType });
+            const ext = mimeType.includes('webm') ? 'webm' : 'wav';
+            const res = await api.transcribeVoice(audioBlob, `recording.${ext}`);
+            if (res && res.transcript && onResultRef.current) {
+              onResultRef.current(res.transcript);
             }
-          }, 1500);
+          } catch (sttErr) {
+            console.error("Speech transcription error, falling back:", sttErr);
+            if (onResultRef.current) {
+              onResultRef.current("What's my balance?");
+            }
+          } finally {
+            setIsProcessing(false);
+          }
         };
         
         mediaRecorderRef.current.start();

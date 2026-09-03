@@ -178,6 +178,15 @@ export default function Dashboard() {
           await refreshFinancialData();
         }
 
+        // Smooth navigation for UI control intents
+        if (response.intent === 'upload_document') {
+          document.querySelector('section[aria-label="Upload Documents"]')?.scrollIntoView({ behavior: 'smooth' });
+        } else if (response.intent === 'read_recent_transactions') {
+          document.querySelector('section[aria-label="Recent Activity"]')?.scrollIntoView({ behavior: 'smooth' });
+        } else if (response.intent === 'read_goals') {
+          document.querySelector('section[aria-label="Financial Goals"]')?.scrollIntoView({ behavior: 'smooth' });
+        }
+
         speak(response.answer_text, () => {
           startListening();
         });

@@ -143,6 +143,9 @@ def main() -> None:
 
     print("=" * 70)
     print("Demo completed successfully.")
+    print("For full unified interactive testing (financial queries, scam checks,")
+    print("UI control intents, speech-to-text, and multi-turn flows), run:")
+    print("    .venv/Scripts/python.exe ai/live_demo.py")
     print("=" * 70 + "\n")
 
 

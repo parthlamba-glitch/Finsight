@@ -19,6 +19,7 @@ from decimal import Decimal
 import os
 import re
 from typing import Any, Callable, Dict, Optional, Union
+import uuid
 from openai import OpenAI
 from sqlalchemy.orm import Session
 
@@ -48,6 +49,44 @@ def serialize_data_boundary(obj: Any) -> Any:
     return obj
 
 
+def resolve_goal_id_from_db(
+    user_id: int,
+    goal_name_or_id: str,
+    db: Session,
+) -> Optional[int]:
+    """
+    Safely resolves a goal name to a genuine database goal_id for the given user.
+    Never invents a goal ID.
+    """
+    if not goal_name_or_id or not db:
+        return None
+
+    # Check direct numeric ID match
+    if str(goal_name_or_id).isdigit():
+        goal_by_id = (
+            db.query(Goal)
+            .filter(Goal.user_id == user_id, Goal.id == int(goal_name_or_id))
+            .first()
+        )
+        if goal_by_id:
+            return goal_by_id.id
+
+    # Check case-insensitive name match / substring match
+    goals = db.query(Goal).filter(Goal.user_id == user_id).all()
+    query_name = str(goal_name_or_id).lower().strip()
+
+    for g in goals:
+        g_name = g.name.lower()
+        if g_name == query_name or query_name in g_name or g_name in query_name:
+            return g.id
+
+    # If user has only one goal and refers to it generically (e.g. "savings goal", "my savings")
+    if len(goals) == 1 and ("saving" in query_name or "goal" in query_name):
+        return goals[0].id
+
+    return None
+
+
 class AIPipeline:
     """
     Unified AI Pipeline for FinSight.
@@ -73,6 +112,9 @@ class AIPipeline:
         """
         if not user_id:
             raise ValueError("user_id must be provided by authenticated context.")
+
+        if not conversation_id:
+            conversation_id = str(uuid.uuid4())
 
         if not query or not query.strip():
             return {
@@ -196,7 +238,11 @@ class AIPipeline:
                     "conversation_id": conversation_id,
                 }
 
-            scam_result = assess_scam_message(message=msg_text)
+            if not has_live_key:
+                from ai.live_demo import _evaluate_mock_scam_message
+                scam_result = _evaluate_mock_scam_message(msg_text)
+            else:
+                scam_result = assess_scam_message(message=msg_text)
             answer_text = format_scam_conversational_response(scam_result)
             conversation_manager.clear(conversation_id)
 
@@ -369,30 +415,51 @@ def run_finSight_pipeline(
         resolved_user_id = 1
         if isinstance(user_id, int):
             resolved_user_id = user_id
-        elif isinstance(user_id, str) and user_id.isdigit():
-            resolved_user_id = int(user_id)
+        elif isinstance(user_id, str):
+            if user_id.isdigit():
+                resolved_user_id = int(user_id)
+            elif active_db:
+                demo_user = active_db.query(User).filter((User.email == user_id) | (User.full_name == user_id)).first()
+                if not demo_user and user_id.lower() == "demo_user":
+                    demo_user = active_db.query(User).first()
+                if demo_user:
+                    resolved_user_id = demo_user.id
         elif active_db:
             u = active_db.query(User).first()
             if u:
                 resolved_user_id = u.id
 
         if active_db is not None:
+            conv_id = context.get("conversation_id") if isinstance(context, dict) else None
+            conf_token = context.get("confirmation_token") if isinstance(context, dict) else None
             res = AIPipeline.process_query(
                 user_id=resolved_user_id,
                 query=query,
                 db=active_db,
+                conversation_id=conv_id,
+                confirmation_token=conf_token,
             )
+            facts = res.get("structured_facts") or res.get("structured_data") or {}
             return {
-                "answer_text": res["answer_text"],
-                "structured_data": res["structured_facts"],
-                "intent": res["intent"],
-                "conversation_status": res["conversation_status"],
-                "execution_mode": res["execution_mode"],
+                "answer_text": res.get("answer_text", ""),
+                "structured_data": facts,
+                "structured_facts": facts,
+                "intent": res.get("intent", "unknown"),
+                "conversation_status": res.get("conversation_status", "completed"),
+                "conversation_id": res.get("conversation_id", conv_id),
+                "execution_mode": res.get("execution_mode", "MOCK_FALLBACK"),
+                "requires_confirmation": res.get("requires_confirmation", False),
+                "confirmation_token": res.get("confirmation_token"),
+                "pending_payment_id": res.get("pending_payment_id"),
             }
         else:
             return {
                 "answer_text": "Database session not available.",
                 "structured_data": {},
+                "structured_facts": {},
+                "intent": "unknown",
+                "conversation_status": "completed",
+                "execution_mode": "MOCK_FALLBACK",
             }
     finally:
         if own_session and active_db is not None:
