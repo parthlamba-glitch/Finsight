@@ -7,10 +7,13 @@ ARCHITECTURAL PRINCIPLES:
 - The LLM is only used for semantic parsing (routing) and grounded narration (explaining).
 """
 
+import logging
 import os
 from typing import Dict, Any, Optional, Tuple
 from ai.intent_router import route_query
 from ai.explainer import explain_result
+
+logger = logging.getLogger(__name__)
 
 
 class LLMClient:
@@ -34,6 +37,7 @@ class LLMClient:
 
         router_client = None
         if not has_live_key:
+            logger.info("[LLMClient] Live LLM key not configured. Using build_dynamic_mock_router fallback.")
             from ai.live_demo import build_dynamic_mock_router
 
             router_client = build_dynamic_mock_router(query, context=context)
@@ -57,6 +61,22 @@ class LLMClient:
             }, question
         else:
             err = result.get("message", "Routing failed.")
+            if has_live_key:
+                logger.warning(
+                    f"[LLMClient] Live Gemini router returned error: '{err}'. "
+                    "Attempting fallback to local mock router."
+                )
+                from ai.live_demo import build_dynamic_mock_router
+
+                fallback_client = build_dynamic_mock_router(query, context=context)
+                fallback_res = route_query(query=query, user_id=user_id, context=context, client=fallback_client)
+                if fallback_res.get("status") == "success":
+                    logger.info("[LLMClient] Fallback mock router succeeded after live failure.")
+                    return {
+                        "intent": fallback_res.get("function_name"),
+                        "arguments": fallback_res.get("arguments", {}),
+                    }, None
+
             return {"status": "error", "message": err}, err
 
     @staticmethod
@@ -76,12 +96,29 @@ class LLMClient:
 
         explainer_client = None
         if not has_live_key:
+            logger.info("[LLMClient] Live LLM key not configured. Using build_dynamic_mock_explainer fallback.")
             from ai.live_demo import build_dynamic_mock_explainer
 
             explainer_client = build_dynamic_mock_explainer(engine_facts, user_query)
 
         exp_res = explain_result(engine_result=engine_facts, user_question=user_query, client=explainer_client)
         answer_text = exp_res.get("answer_text", "I don't have that information available.")
+
+        if has_live_key and answer_text == "I don't have that information available.":
+            logger.warning(
+                "[LLMClient] Live Gemini explanation was rejected by grounding validator or unavailable. "
+                "Attempting fallback to local template explainer."
+            )
+            from ai.live_demo import build_dynamic_mock_explainer
+
+            fallback_exp_client = build_dynamic_mock_explainer(engine_facts, user_query)
+            fallback_res = explain_result(
+                engine_result=engine_facts, user_question=user_query, client=fallback_exp_client
+            )
+            fallback_text = fallback_res.get("answer_text")
+            if fallback_text and fallback_text != "I don't have that information available.":
+                logger.info("[LLMClient] Fallback mock explainer succeeded after live explanation failure.")
+                answer_text = fallback_text
 
         aria_priority = "polite"
         if isinstance(engine_facts, dict) and (

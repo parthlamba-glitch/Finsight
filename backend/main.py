@@ -17,6 +17,16 @@ if str(_REPO_ROOT) not in sys.path:
 if str(_BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(_BACKEND_DIR))
 
+# Load project-root .env before any router or AI module is imported
+from dotenv import load_dotenv
+
+if (_REPO_ROOT / ".env").is_file():
+    load_dotenv(_REPO_ROOT / ".env")
+elif (_BACKEND_DIR / ".env").is_file():
+    load_dotenv(_BACKEND_DIR / ".env")
+else:
+    load_dotenv()
+
 from fastapi import FastAPI, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text

@@ -20,6 +20,7 @@ ARCHITECTURAL INVARIANTS:
 
 from decimal import Decimal
 import json
+import logging
 import os
 import re
 from typing import Any, Dict, Optional
@@ -29,6 +30,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 # ==============================================================================
 # FINANCIAL ENGINE TOOL DEFINITIONS (OpenAI Function Calling Schema)
@@ -823,6 +825,7 @@ def route_query(
         }
 
     except Exception as e:
+        logger.error(f"[IntentRouter] Gemini API routing failed: {type(e).__name__}: {str(e)}")
         return {
             "status": "error",
             "message": f"Intent routing failed: {str(e)}",

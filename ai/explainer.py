@@ -86,9 +86,18 @@ def _extract_numbers_from_obj(obj: Any) -> Set[float]:
         numbers.add(float(obj))
     elif isinstance(obj, (int, float)) and not isinstance(obj, bool):
         numbers.add(float(obj))
+    elif isinstance(obj, (datetime, date)):
+        numbers.add(float(obj.year))
+        numbers.add(float(obj.month))
+        numbers.add(float(obj.day))
+        if isinstance(obj, datetime):
+            numbers.add(float(obj.hour))
+            numbers.add(float(obj.minute))
+            numbers.add(float(obj.second))
     elif isinstance(obj, str):
-        # Extract number patterns like 30,000, 32000, 15.5, 2026-08-27
-        matches = re.findall(r"\b\d+(?:,\d{3})*(?:\.\d+)?\b", obj)
+        # Extract number patterns like 30,000, 32000, 15.5, 2026-08-27 (replace T for ISO timestamps)
+        clean_str = obj.replace("T", " ")
+        matches = re.findall(r"\b\d+(?:,\d{3})*(?:\.\d+)?\b", clean_str)
         for m in matches:
             try:
                 numbers.add(float(m.replace(",", "")))
