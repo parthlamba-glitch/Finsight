@@ -1,44 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import './styles/designTokens.css';
 @import './styles/accessibility.css';
+@import './styles/orb.css';
 
-:root {
-  /* Color System - Forest Theme */
-  --color-bg: #0E1B17;           /* Forest Black */
-  --color-surface: #172823;      /* Deep Forest */
-  --color-surface-elevated: #20352E; /* Forest Slate */
-  
-  --color-text: #F5F2E8;         /* Warm Ivory */
-  --color-text-muted: #B8C5BE;   /* Soft Sage */
-  
-  --color-primary: #8FD694;      /* Fresh Sage */
-  --color-primary-dark: #4F8A68; /* Deep Sage */
-  
-  --color-border: #30443C;       /* Muted Forest */
-  
-  --color-warning: #E6B85C;      /* Warm Amber */
-  --color-error: #D96C6C;        /* Soft Red */
-  --color-success: #8FD694;      /* Fresh Sage */
-
-  /* Typography Scales - Desktop Default */
-  --font-hero: 64px;
-  --font-page-heading: 36px;
-  --font-section-heading: 24px;
-  --font-card-heading: 18px;
-  --font-body: 16px;
-  --font-secondary: 14px;
-}
-
-@media (max-width: 768px) {
-  :root {
-    /* Typography Scales - Mobile */
-    --font-hero: 40px;
-    --font-page-heading: 28px;
-    --font-section-heading: 21px;
-    --font-body: 16px;
-  }
-}
-
-* {
+/* =========================================================================
+   1. Base Reset & Defaults
+   ========================================================================= */
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
@@ -49,206 +17,308 @@ html, body {
 
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--color-bg);
-  color: var(--color-text);
+  background-color: var(--fs-bg, #071510);
+  color: var(--fs-text, #F5F4EC);
   line-height: 1.5;
-  cursor: pointer; /* Interaction wall everywhere */
+  letter-spacing: -0.01em;
 }
 
-/* Typography Elements */
-h1, h2, h3, h4, p {
+/* =========================================================================
+   2. Typography Scale (Inter / Tabular Figures for Numbers)
+   ========================================================================= */
+h1, h2, h3, h4, h5, h6, p {
   margin: 0;
 }
 
-.text-hero { font-size: var(--font-hero); font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
-.text-page-heading { font-size: var(--font-page-heading); font-weight: 600; letter-spacing: -0.01em; }
-.text-section-heading { font-size: var(--font-section-heading); font-weight: 500; }
-.text-card-heading { font-size: var(--font-card-heading); font-weight: 500; }
-.text-body { font-size: var(--font-body); }
-.text-secondary { font-size: var(--font-secondary); color: var(--color-text-muted); }
+.text-hero {
+  font-size: var(--fs-font-hero, 48px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
 
-/* Layout Primitives */
+.text-page-heading {
+  font-size: var(--fs-font-heading-lg, 32px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.text-section-heading {
+  font-size: var(--fs-font-heading-md, 24px);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
+.text-card-heading {
+  font-size: var(--fs-font-heading-sm, 20px);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.text-body {
+  font-size: var(--fs-font-body, 16px);
+  line-height: 1.55;
+  color: var(--fs-text, #F5F4EC);
+}
+
+.text-secondary {
+  font-size: var(--fs-font-secondary, 14px);
+  line-height: 1.5;
+  color: var(--fs-text-secondary, #AAB8B1);
+}
+
+.text-meta {
+  font-size: var(--fs-font-meta, 12px);
+  line-height: 1.4;
+  color: var(--fs-text-muted, #71817A);
+  letter-spacing: 0.3px;
+}
+
+/* Tabular figures helper */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* =========================================================================
+   3. Layout Primitives
+   ========================================================================= */
 .container {
-  max-width: 1000px;
+  max-width: 1080px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 1.5rem 1.25rem;
 }
 
 .flex-col { display: flex; flex-direction: column; }
 .flex-row { display: flex; flex-direction: row; }
-.flex-center { align-items: center; justify-content: center; }
+.flex-center { display: flex; align-items: center; justify-content: center; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+
+.gap-1 { gap: 0.25rem; }
 .gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 0.75rem; }
 .gap-4 { gap: 1rem; }
 .gap-6 { gap: 1.5rem; }
 .gap-8 { gap: 2rem; }
 
-/* Design Language - Cards */
+/* Responsive Grid for Metrics & Overview */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+/* =========================================================================
+   4. Surfaces & Cards
+   ========================================================================= */
 .card {
-  background-color: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: 18px;
+  background-color: var(--fs-surface-card, #0F251E);
+  border: 1px solid var(--fs-border, #1B382E);
+  border-radius: var(--fs-radius-lg, 18px);
   padding: 1.5rem;
+  box-shadow: var(--fs-shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.3));
+  transition: border-color var(--fs-transition-fast, 120ms), box-shadow var(--fs-transition-fast, 120ms);
+}
+
+.card:hover {
+  border-color: var(--fs-border-hover, #2B5748);
+}
+
+.card-hero {
+  background: linear-gradient(145deg, #0F2820 0%, #0A1E18 100%);
+  border: 1px solid rgba(141, 219, 146, 0.25);
+  border-radius: var(--fs-radius-lg, 18px);
+  padding: 2rem;
+  box-shadow: var(--fs-shadow-md, 0 4px 16px rgba(0, 0, 0, 0.4)), var(--fs-shadow-glow);
 }
 
 .card-elevated {
-  background-color: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: 18px;
-  padding: 1.5rem;
+  background-color: var(--fs-surface-elevated, #132D24);
+  border: 1px solid var(--fs-border, #1B382E);
+  border-radius: var(--fs-radius-md, 14px);
+  padding: 1.25rem;
+  box-shadow: var(--fs-shadow-md, 0 4px 16px rgba(0, 0, 0, 0.4));
 }
 
-/* Design Language - Buttons */
+.card-warning {
+  background-color: var(--fs-warning-surface, rgba(230, 184, 92, 0.12));
+  border: 1px solid var(--fs-warning-border, rgba(230, 184, 92, 0.35));
+}
+
+.card-danger {
+  background-color: var(--fs-danger-surface, rgba(224, 108, 117, 0.12));
+  border: 1px solid var(--fs-danger-border, rgba(224, 108, 117, 0.35));
+}
+
+/* =========================================================================
+   5. Buttons & Interactive Controls
+   ========================================================================= */
 .btn {
-  background-color: var(--color-primary);
-  color: var(--color-bg);
-  border: none;
-  border-radius: 12px;
-  padding: 14px 20px;
+  background-color: var(--fs-accent, #8DDB92);
+  color: var(--fs-bg, #071510);
+  border: 1px solid transparent;
+  border-radius: var(--fs-radius-md, 14px);
+  padding: 12px 20px;
   min-height: 48px;
-  font-size: var(--font-body);
+  font-size: var(--fs-font-body, 16px);
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  text-decoration: none;
+  transition: background-color var(--fs-transition-fast, 120ms), transform var(--fs-transition-fast, 120ms), box-shadow var(--fs-transition-fast, 120ms);
 }
 
 .btn:hover:not(:disabled) {
-  background-color: var(--color-primary-dark);
-  color: var(--color-text);
+  background-color: var(--fs-accent-bright, #A7E8A5);
+  box-shadow: 0 4px 12px rgba(141, 219, 146, 0.25);
+  transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .btn-secondary {
-  background-color: transparent;
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
+  background-color: var(--fs-surface, #0D211B);
+  color: var(--fs-text, #F5F4EC);
+  border: 1px solid var(--fs-border, #1B382E);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background-color: var(--color-surface-elevated);
+  background-color: var(--fs-surface-hover, #17372C);
+  border-color: var(--fs-border-hover, #2B5748);
+  color: var(--fs-text, #F5F4EC);
+  box-shadow: none;
+}
+
+.btn-danger {
+  background-color: var(--fs-danger-surface, rgba(224, 108, 117, 0.15));
+  color: var(--fs-danger-bright, #F08D95);
+  border: 1px solid var(--fs-danger-border, rgba(224, 108, 117, 0.35));
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: var(--fs-danger, #E06C75);
+  color: var(--fs-bg, #071510);
+}
+
+.btn-voice {
+  min-height: 64px;
+  min-width: 64px;
+  padding: 16px 32px;
+  border-radius: var(--fs-radius-full, 9999px);
+  font-size: 18px;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(141, 219, 146, 0.25);
 }
 
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
-/* Forms */
+/* =========================================================================
+   6. Form Controls & Inputs
+   ========================================================================= */
 input, select, textarea {
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 14px;
-  font-size: var(--font-body);
+  background-color: var(--fs-bg-elevated, #081A15);
+  color: var(--fs-text, #F5F4EC);
+  border: 1px solid var(--fs-border, #1B382E);
+  border-radius: var(--fs-radius-md, 14px);
+  padding: 14px 16px;
+  font-size: var(--fs-font-body, 16px);
   font-family: inherit;
   width: 100%;
+  transition: border-color var(--fs-transition-fast, 120ms), box-shadow var(--fs-transition-fast, 120ms);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--fs-text-muted, #71817A);
 }
 
 input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(143, 214, 148, 0.2);
+  border-color: var(--fs-border-focus, #8DDB92);
+  box-shadow: 0 0 0 3px rgba(141, 219, 146, 0.2);
 }
 
-/* Utilities */
-.color-primary { color: var(--color-primary); }
-.color-warning { color: var(--color-warning); }
-.color-error { color: var(--color-error); }
-.color-success { color: var(--color-success); }
-.color-muted { color: var(--color-text-muted); }
-
-/* Minimal Animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Checkbox & Switch */
+input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--fs-accent, #8DDB92);
+  cursor: pointer;
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.3s ease forwards;
-}
-
-/* Login Page Responsive Layout */
-.login-container {
-  min-height: 100vh;
-  padding: 2rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.login-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.login-content {
-  display: flex;
-  flex-direction: row;
+/* =========================================================================
+   7. Semantic Status Chips
+   ========================================================================= */
+.chip {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-evenly;
-  flex-grow: 1;
-  gap: 2rem;
-  margin: 2rem 0;
-}
-
-.login-text-area {
-  max-width: 500px;
-}
-
-.login-card-area {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  max-width: 450px;
-}
-
-.login-footer {
-  display: flex;
-  justify-content: center;
-  gap: 3rem;
-  color: var(--color-text-muted);
+  gap: 0.35rem;
+  padding: 4px 10px;
+  border-radius: var(--fs-radius-sm, 8px);
+  font-size: var(--fs-font-meta, 12px);
   font-weight: 600;
-  letter-spacing: 1px;
-  font-size: 0.9rem;
-  flex-wrap: wrap;
+  letter-spacing: 0.3px;
+  width: fit-content;
 }
 
-@media (max-width: 768px) {
-  .login-container {
-    padding: 1.5rem 1rem;
-  }
-  
-  .login-content {
-    flex-direction: column-reverse; /* Puts the card above the text */
-    justify-content: center;
-    gap: 2.5rem;
-  }
-  
-  .login-text-area {
-    text-align: center;
-  }
-  
-  .login-text-area .text-hero {
-    font-size: 24px; /* Small font for mobile as requested */
-    margin-bottom: 0.5rem !important;
-  }
-  
-  .login-text-area .text-body {
-    font-size: 14px; /* Small font for mobile as requested */
-  }
-  
-  .login-footer {
-    gap: 1.5rem;
-    font-size: 0.8rem;
-  }
+.chip-neutral {
+  background-color: var(--fs-surface-elevated, #132D24);
+  color: var(--fs-text-secondary, #AAB8B1);
+  border: 1px solid var(--fs-border, #1B382E);
 }
 
+.chip-success {
+  background-color: var(--fs-success-surface, rgba(141, 219, 146, 0.12));
+  color: var(--fs-success, #8DDB92);
+  border: 1px solid var(--fs-success-border, rgba(141, 219, 146, 0.35));
+}
+
+.chip-warning {
+  background-color: var(--fs-warning-surface, rgba(230, 184, 92, 0.12));
+  color: var(--fs-warning, #E6B85C);
+  border: 1px solid var(--fs-warning-border, rgba(230, 184, 92, 0.35));
+}
+
+.chip-danger {
+  background-color: var(--fs-danger-surface, rgba(224, 108, 117, 0.12));
+  color: var(--fs-danger-bright, #F08D95);
+  border: 1px solid var(--fs-danger-border, rgba(224, 108, 117, 0.35));
+}
+
+/* =========================================================================
+   8. Skeleton Shimmer Loading States
+   ========================================================================= */
+.skeleton {
+  background: linear-gradient(90deg, #0F251E 25%, #153229 50%, #0F251E 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite linear;
+  border-radius: var(--fs-radius-sm, 8px);
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none !important;
+    background: #132D24 !important;
+  }
+}

@@ -1,6 +1,11 @@
 import React from 'react';
 import { Mic, Square, Loader } from 'lucide-react';
 
+/**
+ * VoiceInput Component
+ * Accessible, high-contrast primary voice trigger control.
+ * Minimum 64px interactive target with clear focus and aria announcements.
+ */
 export default function VoiceInput({ 
   isListening, 
   isProcessing, 
@@ -8,42 +13,67 @@ export default function VoiceInput({
   onStopListening 
 }) {
   return (
-    <div className="voice-input-container flex-col flex-center gap-4">
-      {/* Screen reader only live region for announcing states */}
+    <div className="voice-input-container flex-col flex-center gap-3">
+      {/* Screen reader only live region for announcing voice states */}
       <div aria-live="polite" className="sr-only">
-        {isListening ? "Listening. Speak your question." : 
-         isProcessing ? "Understanding your question..." : ""}
+        {isListening ? "Listening. Speak your question now." : 
+         isProcessing ? "FinSight is processing your question." : "Voice copilot ready."}
       </div>
       
       <button
+        type="button"
         onClick={isListening ? onStopListening : onStartListening}
-        className={`btn btn-icon ${isListening ? 'listening' : ''}`}
-        aria-label={isListening ? "Stop listening" : "Start listening"}
+        className="btn btn-voice"
+        aria-label={isListening ? "Stop listening to speech" : "Start speaking to FinSight Copilot"}
+        aria-pressed={isListening}
         disabled={isProcessing}
         style={{ 
-          padding: '1rem',
-          borderRadius: '50%',
-          width: '80px',
-          height: '80px',
-          backgroundColor: isListening ? 'var(--color-error)' : 'var(--color-primary)'
+          borderRadius: 'var(--fs-radius-full, 9999px)',
+          width: '72px',
+          height: '72px',
+          backgroundColor: isListening ? 'var(--fs-danger, #E06C75)' : 'var(--fs-accent, #8DDB92)',
+          color: isListening ? '#FFFFFF' : 'var(--fs-bg, #071510)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: isListening 
+            ? '0 0 24px rgba(224, 108, 117, 0.4)' 
+            : '0 4px 20px rgba(141, 219, 146, 0.3)',
+          border: 'none',
+          cursor: isProcessing ? 'wait' : 'pointer',
         }}
       >
-        {isListening ? <Square size={32} /> : <Mic size={32} />}
+        {isListening ? (
+          <Square size={28} aria-hidden="true" />
+        ) : isProcessing ? (
+          <Loader size={28} className="spin" aria-hidden="true" />
+        ) : (
+          <Mic size={28} aria-hidden="true" />
+        )}
       </button>
 
-      <div className="voice-status" aria-hidden="true" style={{ fontWeight: 'bold' }}>
+      <div className="text-meta" aria-hidden="true" style={{ fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase' }}>
         {isListening ? (
-          <span className="flex-center gap-2"><Mic size={18} /> I'm listening...</span>
+          <span style={{ color: 'var(--fs-danger-bright, #F08D95)' }}>Listening...</span>
         ) : isProcessing ? (
-          <span className="flex-center gap-2"><Loader size={18} className="spin" /> Understanding...</span>
+          <span style={{ color: 'var(--fs-accent, #8DDB92)' }}>Thinking...</span>
         ) : (
-          <span>🎙 ASK FINSIGHT</span>
+          <span style={{ color: 'var(--fs-text-secondary, #AAB8B1)' }}>Tap to Speak</span>
         )}
       </div>
-      
+
       <style>{`
-        .spin { animation: spin 1s linear infinite; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .spin {
+          animation: spin 1.2s linear infinite;
+        }
+        @keyframes spin {
+          100% { transform: rotate(360deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .spin {
+            animation: none !important;
+          }
+        }
       `}</style>
     </div>
   );

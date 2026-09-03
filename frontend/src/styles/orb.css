@@ -1,61 +1,205 @@
+/* src/styles/orb.css */
+/* VoiceOrb Calm Motion System */
+
+.orb-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
 .orb-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  height: 80px;
-  color: var(--color-primary);
-  font-size: 24px;
+  position: relative;
+  width: 96px;
+  height: 96px;
 }
 
+/* Base Orb */
 .orb {
-  width: 24px;
-  height: 24px;
-  background-color: var(--color-primary);
+  width: 44px;
+  height: 44px;
+  background: radial-gradient(circle at 35% 35%, var(--fs-accent-bright, #A7E8A5), var(--fs-accent, #8DDB92));
   border-radius: 50%;
   position: relative;
-  transition: all 0.3s ease;
+  z-index: 2;
+  transition: transform var(--fs-transition-normal, 200ms), background-color var(--fs-transition-normal, 200ms), box-shadow var(--fs-transition-normal, 200ms);
+  box-shadow: 0 4px 16px rgba(141, 219, 146, 0.25);
 }
 
-.orb-listening {
-  box-shadow: 0 0 0 0 rgba(143, 214, 148, 0.7);
-  animation: pulse 1.5s infinite cubic-bezier(0.66, 0, 0, 1);
+/* 1. IDLE: Very subtle, calm breathing */
+.orb-idle {
+  animation: orbBreathe 2.8s infinite ease-in-out;
 }
 
-.orb-speaking {
-  animation: breathe 2s infinite ease-in-out;
-}
-
-@keyframes pulse {
-  to {
-    box-shadow: 0 0 0 20px rgba(143, 214, 148, 0);
+@keyframes orbBreathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2px 10px rgba(141, 219, 146, 0.2);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 4px 18px rgba(141, 219, 146, 0.35);
   }
 }
 
-@keyframes breathe {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.2); opacity: 0.8; box-shadow: 0 0 15px rgba(143, 214, 148, 0.5); }
+/* 2. LISTENING: Concentric acoustic pulse rings */
+.orb-listening {
+  background: radial-gradient(circle at 35% 35%, #B9F5B7, var(--fs-accent, #8DDB92));
+  box-shadow: 0 0 20px rgba(141, 219, 146, 0.4);
 }
 
-.orb-trail {
+.orb-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid var(--fs-accent, #8DDB92);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.orb-listening .orb-ring-1 {
+  animation: ripple 2.2s infinite cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.orb-listening .orb-ring-2 {
+  animation: ripple 2.2s infinite cubic-bezier(0.16, 1, 0.3, 1) 0.7s;
+}
+
+.orb-listening .orb-ring-3 {
+  animation: ripple 2.2s infinite cubic-bezier(0.16, 1, 0.3, 1) 1.4s;
+}
+
+@keyframes ripple {
+  0% {
+    width: 44px;
+    height: 44px;
+    opacity: 0.7;
+  }
+  100% {
+    width: 92px;
+    height: 92px;
+    opacity: 0;
+  }
+}
+
+/* 3. PROCESSING: Restrained, rhythmic thinking pulse */
+.orb-processing {
+  animation: orbProcessing 1.4s infinite ease-in-out;
+  background: radial-gradient(circle at 35% 35%, #D4EED8, #6BBF72);
+}
+
+@keyframes orbProcessing {
+  0%, 100% {
+    transform: scale(0.96);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+    box-shadow: 0 4px 20px rgba(141, 219, 146, 0.4);
+  }
+}
+
+/* 4. SPEAKING: Calm equalizer wave bars */
+.orb-speaking {
+  box-shadow: 0 4px 18px rgba(141, 219, 146, 0.3);
+}
+
+.orb-equalizer {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  font-family: monospace;
-  font-weight: bold;
-  letter-spacing: 2px;
-  color: var(--color-primary);
-  opacity: 0.8;
+  height: 24px;
+  margin-top: 0.25rem;
 }
 
-.wave-dot {
-  animation: wave 1.2s infinite ease-in-out;
+.eq-bar {
+  width: 3.5px;
+  background-color: var(--fs-accent, #8DDB92);
+  border-radius: 2px;
+  animation: eqPulse 1.2s infinite ease-in-out;
 }
-.wave-dot:nth-child(1) { animation-delay: 0s; }
-.wave-dot:nth-child(2) { animation-delay: 0.2s; }
-.wave-dot:nth-child(3) { animation-delay: 0.4s; }
 
-@keyframes wave {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
+.eq-bar:nth-child(1) { height: 10px; animation-delay: 0s; }
+.eq-bar:nth-child(2) { height: 18px; animation-delay: 0.2s; }
+.eq-bar:nth-child(3) { height: 24px; animation-delay: 0.4s; }
+.eq-bar:nth-child(4) { height: 16px; animation-delay: 0.15s; }
+.eq-bar:nth-child(5) { height: 10px; animation-delay: 0.35s; }
+
+@keyframes eqPulse {
+  0%, 100% {
+    transform: scaleY(0.4);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* 5. ERROR: Calm, non-alarming amber state */
+.orb-error {
+  background: radial-gradient(circle at 35% 35%, var(--fs-warning-bright, #F5CF80), var(--fs-warning, #E6B85C));
+  box-shadow: 0 4px 16px rgba(230, 184, 92, 0.25);
+  animation: none;
+}
+
+/* State Badge */
+.orb-state-label {
+  font-size: var(--fs-font-secondary, 14px);
+  font-weight: 500;
+  color: var(--fs-text-secondary, #AAB8B1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  letter-spacing: 0.3px;
+}
+
+.orb-state-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--fs-accent, #8DDB92);
+}
+
+.orb-state-dot.listening {
+  background-color: var(--fs-accent-bright, #A7E8A5);
+  box-shadow: 0 0 8px var(--fs-accent, #8DDB92);
+}
+
+.orb-state-dot.processing {
+  background-color: #8FD694;
+}
+
+.orb-state-dot.speaking {
+  background-color: var(--fs-accent, #8DDB92);
+}
+
+.orb-state-dot.error {
+  background-color: var(--fs-warning, #E6B85C);
+}
+
+/* Reduced motion disables all orb pulsing & ripple animations */
+@media (prefers-reduced-motion: reduce) {
+  .orb-idle,
+  .orb-processing,
+  .orb-listening .orb-ring,
+  .eq-bar {
+    animation: none !important;
+    transform: none !important;
+  }
+  .orb-ring {
+    display: none !important;
+  }
 }

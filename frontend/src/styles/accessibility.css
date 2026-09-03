@@ -13,11 +13,32 @@
   border-width: 0;
 }
 
+/* Skip link for keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 1rem;
+  background: var(--fs-accent, #8DDB92);
+  color: var(--fs-bg, #071510);
+  font-weight: 600;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--fs-radius-sm, 8px);
+  z-index: 10000;
+  transition: top var(--fs-transition-fast, 120ms);
+  text-decoration: none;
+  font-size: var(--fs-font-body, 16px);
+}
+
+.skip-link:focus {
+  top: 1rem;
+  outline: 3px solid var(--fs-text, #F5F4EC);
+  outline-offset: 2px;
+}
+
 /* Ensure all interactive elements have a clear, highly visible focus ring */
 :focus-visible {
-  outline: 3px solid var(--color-focus, #3b82f6);
+  outline: 2.5px solid var(--fs-border-focus, #8DDB92);
   outline-offset: 2px;
-  border-radius: 2px;
 }
 
 /* Remove default focus if focus-visible is supported to avoid double outlines */
@@ -25,36 +46,30 @@
   outline: none;
 }
 
-/* Ensure high contrast text */
-body {
-  color: var(--color-text, #111827);
-  background-color: var(--color-bg, #f9fafb);
-}
-
-@media (prefers-color-scheme: dark) {
-  body {
-    color: var(--color-text-dark, #f9fafb);
-    background-color: var(--color-bg-dark, #111827);
-  }
-}
-
-/* Make touch targets large enough for easy tapping (minimum 44x44px for accessibility) */
+/* Ensure accessible touch target heights (>= 48px standard, >= 64px for primary voice buttons) */
 button, 
 a, 
 input, 
 select, 
 textarea {
-  min-height: 44px;
-  min-width: 44px;
+  min-height: 48px;
+}
+
+/* Tabular numbers utility for all financial and metric displays */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
 /* Disable hover-only functionality - anything hoverable must be focusable or clickable */
-/* Use smooth animations that respect reduced motion preferences */
+/* Strictly enforce prefers-reduced-motion across the entire application */
 @media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
 }

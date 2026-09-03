@@ -1,9 +1,16 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Key, ShieldCheck, UserCheck, AlertCircle, ArrowRight, Mic } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useSpeech } from '../hooks/useSpeech';
 import VoiceOrb from '../components/VoiceOrb';
+import StatusBadge from '../components/StatusBadge';
 
+/**
+ * Login Page Component
+ * Ultra-premium fintech authentication surface with FIDO2 passkeys,
+ * email/password auth, accessibility preferences, and voice navigation.
+ */
 export default function Login() {
   const navigate = useNavigate();
   const { login, signup, loginWithPasskey, authError, clearError } = useAuth();
@@ -24,7 +31,7 @@ export default function Login() {
 
   const formRef = useRef(null);
 
-  // Voice transcript handler callback reference to prevent immutability linter issues
+  // Voice transcript handler callback reference
   const handleVoiceCommand = useCallback(
     async (transcript) => {
       const lower = transcript.toLowerCase();
@@ -72,8 +79,9 @@ export default function Login() {
   const handlePasswordLogin = async (e) => {
     if (e) e.preventDefault();
     if (!email || !password) {
-      setStatusMessage('Please enter both email and password.');
-      speak('Please enter both email and password.');
+      const msg = 'Please enter both email and password.';
+      setStatusMessage(msg);
+      speak(msg);
       return;
     }
 
@@ -98,8 +106,9 @@ export default function Login() {
   const handleSignupSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!name || !email || !password) {
-      setStatusMessage('Please fill in all required fields.');
-      speak('Please fill in all required fields.');
+      const msg = 'Please fill in all required fields.';
+      setStatusMessage(msg);
+      speak(msg);
       return;
     }
 
@@ -164,9 +173,9 @@ export default function Login() {
     if (statusMessage) return statusMessage;
     if (authError) return authError;
     if (isListening) return 'Listening...';
-    if (isProcessing) return 'Understanding...';
+    if (isProcessing) return 'Understanding voice command...';
     if (isSpeaking) return 'Speaking...';
-    if (!isStarted) return 'Tap anywhere or click to start voice navigation';
+    if (!isStarted) return 'Click anywhere to enable voice navigation';
     return '"How would you like to sign in today?"';
   };
 
@@ -184,56 +193,155 @@ export default function Login() {
       tabIndex={!isStarted ? 0 : undefined}
       role={!isStarted ? 'button' : undefined}
       aria-label={!isStarted ? 'Tap anywhere or press Enter to start FinSight voice interface.' : undefined}
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        padding: '2rem 1.5rem',
+        maxWidth: '1200px',
+        margin: '0 auto',
+      }}
     >
-      {/* HEADER: Top Logo */}
-      <header className="login-header">
-        <h1
-          className="text-section-heading color-primary"
-          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', letterSpacing: '2px' }}
-        >
-          ◉ FIN•SIGHT
-        </h1>
-        <div className="text-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          Accessibility ♿
+      {/* 1. TOP BRAND HEADER */}
+      <header
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingBottom: '1rem',
+          borderBottom: '1px solid var(--fs-border-subtle, #142E25)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <span
+            style={{
+              width: '10px',
+              height: '10px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--fs-accent, #8DDB92)',
+              boxShadow: '0 0 12px var(--fs-accent, #8DDB92)',
+              display: 'inline-block',
+            }}
+            aria-hidden="true"
+          />
+          <h1
+            className="text-section-heading"
+            style={{
+              letterSpacing: '1.5px',
+              fontSize: '1.15rem',
+              color: 'var(--fs-text, #F5F4EC)',
+              margin: 0,
+              textTransform: 'uppercase',
+            }}
+          >
+            FIN•SIGHT
+          </h1>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <StatusBadge variant="success" icon={<ShieldCheck size={14} />}>
+            WCAG 2.2 AAA
+          </StatusBadge>
         </div>
       </header>
 
-      {/* CONTENT */}
-      <div className="login-content">
-        {/* TEXT AREA */}
-        <div className="login-text-area">
-          <h2 className="text-hero" style={{ marginBottom: '1.5rem' }}>
-            YOUR MONEY,
+      {/* 2. MAIN TWO-COLUMN CONTENT */}
+      <div
+        className="login-content"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gap: '3rem',
+          alignItems: 'center',
+          margin: '3rem 0',
+        }}
+      >
+        {/* Left Column: Brand & Value Proposition */}
+        <div className="login-text-area" style={{ maxWidth: '520px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <StatusBadge variant="neutral">Financial Copilot</StatusBadge>
+            <StatusBadge variant="success" icon={<Mic size={12} />}>Voice-First</StatusBadge>
+          </div>
+
+          <h2
+            className="text-hero"
+            style={{
+              fontSize: 'clamp(2.5rem, 5vw, 3.5rem)',
+              lineHeight: 1.08,
+              marginBottom: '1.5rem',
+              color: 'var(--fs-text, #F5F4EC)',
+            }}
+          >
+            Your money,
             <br />
-            UNDERSTOOD.
+            <span style={{ color: 'var(--fs-accent, #8DDB92)' }}>understood.</span>
           </h2>
-          <p className="text-body color-muted" style={{ fontSize: '1.1rem' }}>
-            An accessible financial copilot
-            <br />
-            that listens, explains, protects
-            <br />
-            and helps you decide.
+
+          <p
+            className="text-body"
+            style={{
+              fontSize: '1.125rem',
+              lineHeight: 1.6,
+              color: 'var(--fs-text-secondary, #AAB8B1)',
+              marginBottom: '2rem',
+            }}
+          >
+            An accessibility-first financial copilot designed around independence.
+            Listen to your balances, verify suspicious payment links, and make decisions with deterministic precision.
           </p>
+
+          {/* Voice Prompt Helper Box */}
+          <div
+            className="card card-elevated"
+            style={{
+              padding: '1.25rem',
+              border: '1px solid var(--fs-border-hover, #2B5748)',
+              backgroundColor: 'var(--fs-surface-card, #0F251E)',
+            }}
+          >
+            <p className="text-meta" style={{ textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, marginBottom: '0.5rem' }}>
+              Voice Navigation Prompt
+            </p>
+            <p className="text-body" style={{ color: 'var(--fs-accent-bright, #A7E8A5)', fontStyle: 'italic', margin: 0 }}>
+              "You can say 'Sign in', 'Create account', or 'Use passkey'."
+            </p>
+          </div>
         </div>
 
-        {/* AUTH CARD AREA */}
+        {/* Right Column: Authentication Card */}
         <main className="login-card-area">
-          <div className="card flex-col gap-6" style={{ width: '100%', textAlign: 'center', zIndex: 10 }}>
-            <div style={{ margin: '1rem 0' }}>
-              <VoiceOrb isListening={isListening} isProcessing={isProcessing} isSpeaking={isSpeaking || !isStarted} />
+          <div
+            className="card card-hero"
+            style={{
+              width: '100%',
+              maxWidth: '460px',
+              margin: '0 auto',
+              padding: '2.25rem 2rem',
+              borderRadius: 'var(--fs-radius-modal, 20px)',
+            }}
+          >
+            {/* Acoustic Orb Indicator */}
+            <div style={{ marginBottom: '0.5rem' }}>
+              <VoiceOrb
+                isListening={isListening}
+                isProcessing={isProcessing}
+                isSpeaking={isSpeaking || !isStarted}
+              />
             </div>
 
-            <div>
-              <h3 className="text-card-heading color-primary">
-                {mode === 'signup' ? 'Create FinSight Account' : 'Welcome to FinSight'}
+            {/* Title & Live Status */}
+            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+              <h3 className="text-card-heading" style={{ color: 'var(--fs-text, #F5F4EC)', fontSize: '1.35rem' }}>
+                {mode === 'signup' ? 'Create Your Account' : mode === 'passkey' ? 'Device Passkey Sign In' : 'Welcome Back'}
               </h3>
               <p
-                className="text-body"
+                className="text-secondary"
                 style={{
-                  marginTop: '1rem',
-                  fontStyle: 'italic',
-                  minHeight: '48px',
-                  color: authError ? 'var(--color-error)' : 'var(--color-text)',
+                  marginTop: '0.5rem',
+                  fontSize: '0.925rem',
+                  minHeight: '24px',
+                  color: authError ? 'var(--fs-danger-bright, #F08D95)' : 'var(--fs-text-secondary, #AAB8B1)',
                 }}
                 aria-live="polite"
               >
@@ -241,27 +349,33 @@ export default function Login() {
               </p>
             </div>
 
-            {/* TAB SELECTOR */}
+            {/* Mode Switcher Tabs */}
             <div
               role="tablist"
-              aria-label="Authentication mode"
+              aria-label="Authentication Mode Selection"
               style={{
-                display: 'flex',
-                justifyContent: 'center',
-                gap: '0.5rem',
-                borderBottom: '1px solid var(--color-border)',
-                paddingBottom: '0.5rem',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '0.35rem',
+                backgroundColor: 'var(--fs-bg, #071510)',
+                padding: '4px',
+                borderRadius: 'var(--fs-radius-md, 14px)',
+                marginBottom: '1.75rem',
+                border: '1px solid var(--fs-border, #1B382E)',
               }}
             >
               <button
                 type="button"
                 role="tab"
                 aria-selected={mode === 'login'}
-                className={`btn btn-secondary ${mode === 'login' ? 'active' : ''}`}
+                className="btn btn-secondary"
                 style={{
-                  padding: '8px 16px',
-                  fontSize: '0.9rem',
-                  border: mode === 'login' ? '2px solid var(--color-primary)' : '1px solid transparent',
+                  minHeight: '38px',
+                  padding: '8px',
+                  fontSize: '0.85rem',
+                  backgroundColor: mode === 'login' ? 'var(--fs-surface-elevated, #132D24)' : 'transparent',
+                  color: mode === 'login' ? 'var(--fs-accent, #8DDB92)' : 'var(--fs-text-secondary, #AAB8B1)',
+                  border: mode === 'login' ? '1px solid var(--fs-border-focus, #8DDB92)' : 'none',
                 }}
                 onClick={() => {
                   setMode('login');
@@ -276,11 +390,14 @@ export default function Login() {
                 type="button"
                 role="tab"
                 aria-selected={mode === 'signup'}
-                className={`btn btn-secondary ${mode === 'signup' ? 'active' : ''}`}
+                className="btn btn-secondary"
                 style={{
-                  padding: '8px 16px',
-                  fontSize: '0.9rem',
-                  border: mode === 'signup' ? '2px solid var(--color-primary)' : '1px solid transparent',
+                  minHeight: '38px',
+                  padding: '8px',
+                  fontSize: '0.85rem',
+                  backgroundColor: mode === 'signup' ? 'var(--fs-surface-elevated, #132D24)' : 'transparent',
+                  color: mode === 'signup' ? 'var(--fs-accent, #8DDB92)' : 'var(--fs-text-secondary, #AAB8B1)',
+                  border: mode === 'signup' ? '1px solid var(--fs-border-focus, #8DDB92)' : 'none',
                 }}
                 onClick={() => {
                   setMode('signup');
@@ -288,18 +405,21 @@ export default function Login() {
                   setStatusMessage('');
                 }}
               >
-                Create Account
+                Register
               </button>
 
               <button
                 type="button"
                 role="tab"
                 aria-selected={mode === 'passkey'}
-                className={`btn btn-secondary ${mode === 'passkey' ? 'active' : ''}`}
+                className="btn btn-secondary"
                 style={{
-                  padding: '8px 16px',
-                  fontSize: '0.9rem',
-                  border: mode === 'passkey' ? '2px solid var(--color-primary)' : '1px solid transparent',
+                  minHeight: '38px',
+                  padding: '8px',
+                  fontSize: '0.85rem',
+                  backgroundColor: mode === 'passkey' ? 'var(--fs-surface-elevated, #132D24)' : 'transparent',
+                  color: mode === 'passkey' ? 'var(--fs-accent, #8DDB92)' : 'var(--fs-text-secondary, #AAB8B1)',
+                  border: mode === 'passkey' ? '1px solid var(--fs-border-focus, #8DDB92)' : 'none',
                 }}
                 onClick={() => {
                   setMode('passkey');
@@ -311,12 +431,35 @@ export default function Login() {
               </button>
             </div>
 
-            {/* FORM CONTAINER */}
-            <div style={{ textAlign: 'left' }}>
+            {/* Error Banner */}
+            {authError && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.6rem',
+                  padding: '10px 14px',
+                  backgroundColor: 'var(--fs-danger-surface, rgba(224, 108, 117, 0.12))',
+                  border: '1px solid var(--fs-danger-border, rgba(224, 108, 117, 0.35))',
+                  borderRadius: 'var(--fs-radius-sm, 8px)',
+                  marginBottom: '1.25rem',
+                  color: 'var(--fs-danger-bright, #F08D95)',
+                  fontSize: '0.9rem',
+                }}
+                role="alert"
+              >
+                <AlertCircle size={18} aria-hidden="true" />
+                <span>{authError}</span>
+              </div>
+            )}
+
+            {/* 3. AUTH FORMS */}
+            <div>
+              {/* MODE 1: Standard Password Login */}
               {mode === 'login' && (
                 <form onSubmit={handlePasswordLogin} className="flex-col gap-4" ref={formRef} tabIndex={-1}>
                   <div>
-                    <label htmlFor="login-email" className="text-secondary" style={{ display: 'block', marginBottom: '4px' }}>
+                    <label htmlFor="login-email" className="text-secondary" style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>
                       Email Address
                     </label>
                     <input
@@ -326,21 +469,12 @@ export default function Login() {
                       autoComplete="username"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="user@example.com"
-                      className="input"
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        backgroundColor: 'var(--color-bg)',
-                        color: 'var(--color-text)',
-                        border: '1px solid var(--color-border)',
-                      }}
+                      placeholder="aarav.sharma@example.com"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="login-password" className="text-secondary" style={{ display: 'block', marginBottom: '4px' }}>
+                    <label htmlFor="login-password" className="text-secondary" style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>
                       Password
                     </label>
                     <input
@@ -351,15 +485,6 @@ export default function Login() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="input"
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        backgroundColor: 'var(--color-bg)',
-                        color: 'var(--color-text)',
-                        border: '1px solid var(--color-border)',
-                      }}
                     />
                   </div>
 
@@ -367,27 +492,37 @@ export default function Login() {
                     type="submit"
                     className="btn"
                     disabled={isSubmitting}
-                    style={{ marginTop: '0.5rem', width: '100%', padding: '14px' }}
+                    style={{ marginTop: '0.5rem', width: '100%' }}
                   >
-                    {isSubmitting ? 'Signing In...' : 'Sign In with Password'}
+                    <span>{isSubmitting ? 'Signing In...' : 'Sign In'}</span>
+                    <ArrowRight size={18} aria-hidden="true" />
                   </button>
+
+                  <div style={{ position: 'relative', margin: '1rem 0', textAlign: 'center' }}>
+                    <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '1px', backgroundColor: 'var(--fs-border, #1B382E)' }} />
+                    <span style={{ position: 'relative', backgroundColor: 'var(--fs-surface-card, #0F251E)', padding: '0 12px', fontSize: '12px', color: 'var(--fs-text-muted, #71817A)', textTransform: 'uppercase' }}>
+                      Fast & Biometric
+                    </span>
+                  </div>
 
                   <button
                     type="button"
                     className="btn btn-secondary"
                     onClick={handlePasskeyLogin}
                     disabled={isSubmitting}
-                    style={{ width: '100%', padding: '12px' }}
+                    style={{ width: '100%' }}
                   >
-                    🔑 Sign In with Device Passkey
+                    <Key size={18} aria-hidden="true" />
+                    <span>Sign In with Device Passkey</span>
                   </button>
                 </form>
               )}
 
+              {/* MODE 2: Registration / Signup */}
               {mode === 'signup' && (
                 <form onSubmit={handleSignupSubmit} className="flex-col gap-4" ref={formRef} tabIndex={-1}>
                   <div>
-                    <label htmlFor="signup-name" className="text-secondary" style={{ display: 'block', marginBottom: '4px' }}>
+                    <label htmlFor="signup-name" className="text-secondary" style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>
                       Full Name
                     </label>
                     <input
@@ -397,21 +532,12 @@ export default function Login() {
                       autoComplete="name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Your Full Name"
-                      className="input"
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        backgroundColor: 'var(--color-bg)',
-                        color: 'var(--color-text)',
-                        border: '1px solid var(--color-border)',
-                      }}
+                      placeholder="Aarav Sharma"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="signup-email" className="text-secondary" style={{ display: 'block', marginBottom: '4px' }}>
+                    <label htmlFor="signup-email" className="text-secondary" style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>
                       Email Address
                     </label>
                     <input
@@ -421,21 +547,12 @@ export default function Login() {
                       autoComplete="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="user@example.com"
-                      className="input"
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        backgroundColor: 'var(--color-bg)',
-                        color: 'var(--color-text)',
-                        border: '1px solid var(--color-border)',
-                      }}
+                      placeholder="aarav.sharma@example.com"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="signup-password" className="text-secondary" style={{ display: 'block', marginBottom: '4px' }}>
+                    <label htmlFor="signup-password" className="text-secondary" style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>
                       Password (min 8 characters)
                     </label>
                     <input
@@ -447,40 +564,40 @@ export default function Login() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="input"
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        backgroundColor: 'var(--color-bg)',
-                        color: 'var(--color-text)',
-                        border: '1px solid var(--color-border)',
-                      }}
                     />
                   </div>
 
-                  <fieldset style={{ border: '1px solid var(--color-border)', borderRadius: '8px', padding: '10px' }}>
-                    <legend className="text-secondary" style={{ fontSize: '0.85rem' }}>
+                  {/* Accessibility Preferences */}
+                  <fieldset
+                    style={{
+                      border: '1px solid var(--fs-border, #1B382E)',
+                      borderRadius: 'var(--fs-radius-md, 14px)',
+                      padding: '12px 14px',
+                      backgroundColor: 'var(--fs-bg, #071510)',
+                      marginTop: '0.25rem',
+                    }}
+                  >
+                    <legend className="text-meta" style={{ textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
                       Accessibility Preferences
                     </legend>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '6px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '8px' }}>
                       <input
                         type="checkbox"
                         checked={screenReaderOptimized}
                         onChange={(e) => setScreenReaderOptimized(e.target.checked)}
                       />
                       <span className="text-body" style={{ fontSize: '0.9rem' }}>
-                        Screen reader optimization
+                        Screen reader announcements enabled
                       </span>
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
                       <input
                         type="checkbox"
                         checked={highContrast}
                         onChange={(e) => setHighContrast(e.target.checked)}
                       />
                       <span className="text-body" style={{ fontSize: '0.9rem' }}>
-                        High contrast display
+                        High contrast theme (WCAG AAA)
                       </span>
                     </label>
                   </fieldset>
@@ -489,21 +606,41 @@ export default function Login() {
                     type="submit"
                     className="btn"
                     disabled={isSubmitting}
-                    style={{ marginTop: '0.5rem', width: '100%', padding: '14px' }}
+                    style={{ marginTop: '0.5rem', width: '100%' }}
                   >
-                    {isSubmitting ? 'Creating Account...' : 'Create Account'}
+                    <UserCheck size={18} aria-hidden="true" />
+                    <span>{isSubmitting ? 'Creating Account...' : 'Create Account'}</span>
                   </button>
                 </form>
               )}
 
+              {/* MODE 3: Dedicated Passkey Sign In */}
               {mode === 'passkey' && (
                 <div className="flex-col gap-4">
-                  <p className="text-body" style={{ fontSize: '0.95rem' }}>
-                    Sign in securely with Windows Hello, Touch ID, Face ID, or your platform security key.
-                  </p>
+                  <div
+                    style={{
+                      backgroundColor: 'var(--fs-bg, #071510)',
+                      border: '1px solid var(--fs-border, #1B382E)',
+                      borderRadius: 'var(--fs-radius-md, 14px)',
+                      padding: '1rem',
+                      lineHeight: 1.55,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <Key size={18} color="var(--fs-accent, #8DDB92)" aria-hidden="true" />
+                      <span style={{ fontWeight: 600, color: 'var(--fs-text, #F5F4EC)', fontSize: '0.95rem' }}>
+                        Cryptographic Device Biometrics
+                      </span>
+                    </div>
+                    <p className="text-secondary" style={{ margin: 0, fontSize: '0.875rem' }}>
+                      Sign in seamlessly using Touch ID, Face ID, Windows Hello, or your platform security key.
+                      Your device handles biometric verification directly; FinSight stores only cryptographic public keys.
+                    </p>
+                  </div>
+
                   <div>
-                    <label htmlFor="passkey-email" className="text-secondary" style={{ display: 'block', marginBottom: '4px' }}>
-                      Email (optional for autofill)
+                    <label htmlFor="passkey-email" className="text-secondary" style={{ display: 'block', marginBottom: '6px', fontWeight: 500 }}>
+                      Email (optional for autofill discovery)
                     </label>
                     <input
                       id="passkey-email"
@@ -511,16 +648,7 @@ export default function Login() {
                       autoComplete="username webauthn"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="user@example.com (optional)"
-                      className="input"
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        backgroundColor: 'var(--color-bg)',
-                        color: 'var(--color-text)',
-                        border: '1px solid var(--color-border)',
-                      }}
+                      placeholder="aarav.sharma@example.com"
                     />
                   </div>
 
@@ -529,9 +657,10 @@ export default function Login() {
                     className="btn"
                     onClick={handlePasskeyLogin}
                     disabled={isSubmitting}
-                    style={{ width: '100%', padding: '14px' }}
+                    style={{ width: '100%', marginTop: '0.5rem' }}
                   >
-                    {isSubmitting ? 'Verifying Passkey...' : '🔑 Use Device Passkey'}
+                    <Key size={18} aria-hidden="true" />
+                    <span>{isSubmitting ? 'Verifying Passkey...' : 'Use Device Passkey'}</span>
                   </button>
                 </div>
               )}
@@ -540,12 +669,26 @@ export default function Login() {
         </main>
       </div>
 
-      {/* FOOTER */}
-      <footer className="login-footer">
-        <span>ACCESS</span>
-        <span>UNDERSTAND</span>
-        <span>PROTECT</span>
-        <span>DECIDE</span>
+      {/* 3. ACCESSIBILITY PILLARS FOOTER */}
+      <footer
+        className="login-footer"
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          gap: '2.5rem',
+          color: 'var(--fs-text-muted, #71817A)',
+          fontWeight: 600,
+          letterSpacing: '1.5px',
+          fontSize: '0.85rem',
+          flexWrap: 'wrap',
+          borderTop: '1px solid var(--fs-border-subtle, #142E25)',
+          paddingTop: '1.5rem',
+        }}
+      >
+        <span>1. ACCESS</span>
+        <span>2. UNDERSTAND</span>
+        <span>3. PROTECT</span>
+        <span>4. DECIDE</span>
       </footer>
     </div>
   );

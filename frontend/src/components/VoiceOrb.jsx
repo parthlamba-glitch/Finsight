@@ -1,43 +1,78 @@
 import React from 'react';
 import '../styles/orb.css';
 
-export default function VoiceOrb({ isListening, isProcessing, isSpeaking }) {
-  
+/**
+ * VoiceOrb Component
+ * Central intelligent acoustic indicator with 5 calm states:
+ * IDLE, LISTENING, PROCESSING, SPEAKING, ERROR.
+ *
+ * Fully accessible with screen-reader text and prefers-reduced-motion support.
+ */
+export default function VoiceOrb({
+  isListening = false,
+  isProcessing = false,
+  isSpeaking = false,
+  isError = false,
+}) {
   let state = 'IDLE';
-  if (isListening) state = 'LISTENING';
-  else if (isProcessing) state = 'PROCESSING';
-  else if (isSpeaking) state = 'SPEAKING';
+  let stateLabel = 'Ready';
+
+  if (isError) {
+    state = 'ERROR';
+    stateLabel = 'Attention';
+  } else if (isProcessing) {
+    state = 'PROCESSING';
+    stateLabel = 'Thinking';
+  } else if (isSpeaking) {
+    state = 'SPEAKING';
+    stateLabel = 'Answering';
+  } else if (isListening) {
+    state = 'LISTENING';
+    stateLabel = 'Listening';
+  }
 
   return (
-    <div className="orb-container" aria-hidden="true">
-      <div className={`orb ${
-        state === 'LISTENING' ? 'orb-listening' : 
-        state === 'SPEAKING' ? 'orb-speaking' : ''
-      }`} />
-      
-      {state === 'LISTENING' && (
-        <div className="orb-trail">
-          <span className="wave-dot">~</span>
-          <span className="wave-dot">~</span>
-          <span className="wave-dot">~</span>
-        </div>
-      )}
-      
-      {state === 'PROCESSING' && (
-        <div className="orb-trail">
-          <span className="wave-dot">.</span>
-          <span className="wave-dot">.</span>
-          <span className="wave-dot">.</span>
+    <div className="orb-wrapper" aria-hidden="true">
+      <div className={`orb-container ${isListening ? 'orb-listening' : ''}`}>
+        {/* Acoustic concentric rings for listening state */}
+        {state === 'LISTENING' && (
+          <>
+            <div className="orb-ring orb-ring-1" />
+            <div className="orb-ring orb-ring-2" />
+            <div className="orb-ring orb-ring-3" />
+          </>
+        )}
+
+        {/* Central Orb Core */}
+        <div
+          className={`orb ${
+            state === 'IDLE' ? 'orb-idle' :
+            state === 'PROCESSING' ? 'orb-processing' :
+            state === 'SPEAKING' ? 'orb-speaking' :
+            state === 'ERROR' ? 'orb-error' : ''
+          }`}
+        />
+      </div>
+
+      {/* Speaking Equalizer Wave Bars */}
+      {state === 'SPEAKING' && (
+        <div className="orb-equalizer" aria-hidden="true">
+          <div className="eq-bar" />
+          <div className="eq-bar" />
+          <div className="eq-bar" />
+          <div className="eq-bar" />
+          <div className="eq-bar" />
         </div>
       )}
 
-      {state === 'SPEAKING' && (
-        <div className="orb-trail" style={{ letterSpacing: '4px' }}>
-          <span>)</span>
-          <span>)</span>
-          <span>)</span>
-        </div>
-      )}
+      {/* Calm State Label Badge */}
+      <div className="orb-state-label">
+        <span
+          className={`orb-state-dot ${state.toLowerCase()}`}
+          aria-hidden="true"
+        />
+        <span>{stateLabel}</span>
+      </div>
     </div>
   );
 }

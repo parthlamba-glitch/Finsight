@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { RefreshCw, TrendingUp } from 'lucide-react';
 import AccessibleDashboard from '../components/AccessibleDashboard';
 import ChatPanel from '../components/ChatPanel';
 import TransactionList from '../components/TransactionList';
@@ -6,9 +7,19 @@ import ScamChecker from '../components/ScamChecker';
 import GoalTracker from '../components/GoalTracker';
 import AuthModal from '../components/AuthModal';
 import DocumentUpload from '../components/DocumentUpload';
+import Skeleton from '../components/Skeleton';
+import StatusBadge from '../components/StatusBadge';
+import AnimatedNumber from '../components/AnimatedNumber';
 import { useSpeech } from '../hooks/useSpeech';
 import { api } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
+
+function getTimeOfDayGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -17,14 +28,16 @@ export default function Dashboard() {
   const [isProcessingQuery, setIsProcessingQuery] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isExecutingPayment, setIsExecutingPayment] = useState(false);
+  const [isSyncingBank, setIsSyncingBank] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   const [dashboardStats, setDashboardStats] = useState({
-    balance: 0,
-    spending: 0,
-    income: 0,
-    surplus: 0,
-    savings: 0,
-    upcomingBills: 0,
+    balance: null,
+    spending: null,
+    income: null,
+    surplus: null,
+    savings: null,
+    upcomingBills: null,
     goals: [],
   });
   const [transactions, setTransactions] = useState([]);
@@ -49,6 +62,8 @@ export default function Dashboard() {
       setTransactions(txs);
     } catch (err) {
       console.error('Failed to load dashboard data:', err.message);
+    } finally {
+      setIsLoadingData(false);
     }
   }, []);
 
@@ -69,8 +84,8 @@ export default function Dashboard() {
   useEffect(() => {
     const init = async () => {
       await refreshFinancialData();
-      const greetingName = user?.full_name ? `, ${user.full_name.split(' ')[0]}` : '';
-      speak(`Welcome to FinSight${greetingName}. What would you like to know today?`, () => {
+      const firstName = user?.full_name ? `, ${user.full_name.split(' ')[0]}` : '';
+      speak(`Welcome to FinSight${firstName}. What would you like to know today?`, () => {
         startListening();
       });
     };
@@ -78,11 +93,11 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshFinancialData]);
 
-  // Global tap to speak handler
+  // Global tap-to-speak handler for accessibility
   useEffect(() => {
     const handleGlobalTap = (e) => {
       if (!isListening && !isSpeaking && !isProcessing && !isProcessingQuery && !isAuthOpen) {
-        if (e.target.closest('button, a, input, select, textarea, [role="tab"], [role="button"]')) return;
+        if (e.target.closest('button, a, input, select, textarea, [role="tab"], [role="button"], [role="dialog"]')) return;
         speak('Are you trying to say something?', () => {
           startListening();
         });
@@ -109,7 +124,6 @@ export default function Dashboard() {
       setIsProcessing(false);
       setIsProcessingQuery(false);
 
-      // Trigger payment execution directly
       await executeConfirmedPayment(stagedPayment.pending_payment_id);
       return;
     }
@@ -178,15 +192,6 @@ export default function Dashboard() {
           await refreshFinancialData();
         }
 
-        // Smooth navigation for UI control intents
-        if (response.intent === 'upload_document') {
-          document.querySelector('section[aria-label="Upload Documents"]')?.scrollIntoView({ behavior: 'smooth' });
-        } else if (response.intent === 'read_recent_transactions') {
-          document.querySelector('section[aria-label="Recent Activity"]')?.scrollIntoView({ behavior: 'smooth' });
-        } else if (response.intent === 'read_goals') {
-          document.querySelector('section[aria-label="Financial Goals"]')?.scrollIntoView({ behavior: 'smooth' });
-        }
-
         speak(response.answer_text, () => {
           startListening();
         });
@@ -216,10 +221,7 @@ export default function Dashboard() {
         throw new Error('No pending payment identifier found.');
       }
 
-      // Call authoritative backend execution endpoint
       const result = await api.executePayment(pendingPaymentId);
-
-      // Refresh balances and transactions from authoritative backend
       await refreshFinancialData();
 
       setStagedPayment(null);
@@ -263,18 +265,25 @@ export default function Dashboard() {
   };
 
   const handleSyncBank = async () => {
+    setIsSyncingBank(true);
     try {
       const res = await api.syncBank();
       await refreshFinancialData();
-      const msg = `Bank sync complete. Found ${res.imported_count} new transactions and skipped ${res.duplicate_count} duplicates.`;
+      const msg = `Bank sync complete. Recorded ${res.imported_count} new transactions and skipped ${res.duplicate_count} duplicates.`;
       speak(msg);
     } catch (err) {
       speak('Failed to sync bank feed: ' + err.message);
+    } finally {
+      setIsSyncingBank(false);
     }
   };
 
+  const greeting = getTimeOfDayGreeting();
+  const userName = user?.full_name ? `, ${user.full_name}` : '';
+
   return (
     <AccessibleDashboard onAnnounce={handleAnnounce}>
+      {/* 0. Staged Payment Confirmation Modal */}
       <AuthModal
         isOpen={isAuthOpen}
         paymentDetails={stagedPayment}
@@ -283,28 +292,62 @@ export default function Dashboard() {
         isExecuting={isExecutingPayment}
       />
 
-      <section aria-labelledby="overview-heading">
-        <h2
-          id="overview-heading"
-          className="text-section-heading"
+      {/* 1. HERO FINANCIAL BALANCE (VISUAL ANCHOR) */}
+      <section aria-labelledby="hero-balance-heading">
+        <div
+          className="card card-hero"
           style={{
-            color: 'var(--color-text-muted)',
-            fontSize: '1rem',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
+            padding: '2.5rem 2rem',
+            position: 'relative',
+            overflow: 'hidden',
           }}
         >
-          Overview
-        </h2>
-        <p className="text-page-heading" style={{ marginTop: '0.5rem' }}>
-          Good day{user?.full_name ? `, ${user.full_name}` : ''}
-        </p>
-        <p className="text-secondary" style={{ fontSize: '1.1rem' }}>
-          Here is your authoritative financial status.
-        </p>
+          <div className="flex-between" style={{ flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
+            <span
+              id="hero-balance-heading"
+              className="text-meta"
+              style={{
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                fontWeight: 700,
+                color: 'var(--fs-accent, #8DDB92)',
+              }}
+            >
+              Authoritative Balance · Primary Account
+            </span>
+
+            {dashboardStats.surplus !== null && Number(dashboardStats.surplus) > 0 && (
+              <StatusBadge variant="success" icon={<TrendingUp size={12} />}>
+                +₹{Number(dashboardStats.surplus).toLocaleString('en-IN')} Monthly Surplus
+              </StatusBadge>
+            )}
+          </div>
+
+          {isLoadingData ? (
+            <Skeleton height="56px" width="320px" borderRadius="12px" ariaLabel="Loading authoritative balance..." />
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', margin: '0.5rem 0 1rem' }}>
+              <AnimatedNumber
+                value={dashboardStats.balance || 0}
+                prefix="₹"
+                decimals={2}
+                className="text-hero"
+                style={{
+                  color: 'var(--fs-text, #F5F4EC)',
+                  fontSize: 'clamp(2.5rem, 6vw, 3.5rem)',
+                  fontWeight: 700,
+                }}
+              />
+            </div>
+          )}
+
+          <p className="text-secondary" style={{ fontSize: '1.05rem', margin: 0 }}>
+            {greeting}{userName}. Here is your live financial pulse.
+          </p>
+        </div>
       </section>
 
-      {/* 1. ACCESS Pillar (Conversational Hero) */}
+      {/* 2. COPILOT HERO CENTERPIECE (ACCESS PILLAR) */}
       <ChatPanel
         onQuerySubmit={handleQuery}
         isProcessing={isProcessing || isProcessingQuery}
@@ -317,112 +360,160 @@ export default function Dashboard() {
         onStopListening={stopListening}
       />
 
-      {/* 2. FINANCIAL PULSE */}
+      {/* 3. FINANCIAL PULSE METRICS ROW */}
       <section aria-labelledby="pulse-heading">
-        <h2
-          id="pulse-heading"
-          className="text-section-heading"
-          style={{
-            color: 'var(--color-text-muted)',
-            fontSize: '1rem',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            marginBottom: '1rem',
-          }}
-        >
-          Financial Pulse
-        </h2>
-        <div className="flex-col gap-4">
-          <div className="card">
-            <h3
-              className="text-secondary"
-              style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.5rem' }}
-            >
-              Authoritative Balance
-            </h3>
-            <p className="text-page-heading">₹{Number(dashboardStats.balance || 0).toLocaleString('en-IN')}</p>
-            <p className="text-secondary">Available in primary account</p>
-          </div>
+        <div className="flex-between" style={{ marginBottom: '1rem' }}>
+          <h2
+            id="pulse-heading"
+            className="text-meta"
+            style={{
+              color: 'var(--fs-text-muted, #71817A)',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              fontWeight: 700,
+            }}
+          >
+            Financial Pulse Metrics
+          </h2>
+          <span className="text-meta">Authoritative Engine Data</span>
+        </div>
 
+        <div className="metrics-grid">
+          {/* Card 1: Monthly Spending */}
           <div className="card">
-            <h3
-              className="text-secondary"
-              style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.5rem' }}
-            >
-              Spending
-            </h3>
-            <p className="text-page-heading">₹{Number(dashboardStats.spending || 0).toLocaleString('en-IN')}</p>
-            <p className="text-secondary">This month</p>
-          </div>
-
-          {dashboardStats.upcomingBills > 0 && (
-            <div className="card">
-              <h3
-                className="text-secondary"
-                style={{ textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.5rem' }}
-              >
-                Upcoming Bills (30 Days)
-              </h3>
-              <p className="text-page-heading" style={{ color: 'var(--color-warning)' }}>
-                ₹{Number(dashboardStats.upcomingBills || 0).toLocaleString('en-IN')}
+            <span className="text-meta" style={{ textTransform: 'uppercase', display: 'block', marginBottom: '0.35rem' }}>
+              Monthly Spending
+            </span>
+            {isLoadingData ? (
+              <Skeleton height="36px" width="160px" />
+            ) : (
+              <p className="text-page-heading tabular-nums" style={{ color: 'var(--fs-text, #F5F4EC)' }}>
+                ₹{Number(dashboardStats.spending || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </p>
-              <p className="text-secondary">Due within 30 days</p>
+            )}
+            <p className="text-secondary" style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>
+              Current calendar month
+            </p>
+          </div>
+
+          {/* Card 2: Monthly Income */}
+          <div className="card">
+            <span className="text-meta" style={{ textTransform: 'uppercase', display: 'block', marginBottom: '0.35rem' }}>
+              Monthly Income
+            </span>
+            {isLoadingData ? (
+              <Skeleton height="36px" width="160px" />
+            ) : (
+              <p className="text-page-heading tabular-nums" style={{ color: 'var(--fs-accent, #8DDB92)' }}>
+                ₹{Number(dashboardStats.income || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              </p>
+            )}
+            <p className="text-secondary" style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>
+              Active accounts baseline
+            </p>
+          </div>
+
+          {/* Card 3: Upcoming Unpaid Bills */}
+          <div className={`card ${Number(dashboardStats.upcomingBills || 0) > 0 ? 'card-warning' : ''}`}>
+            <div className="flex-between" style={{ marginBottom: '0.35rem' }}>
+              <span className="text-meta" style={{ textTransform: 'uppercase' }}>
+                Upcoming Commitments
+              </span>
+              {Number(dashboardStats.upcomingBills || 0) > 0 && (
+                <StatusBadge variant="warning" showDot={false}>
+                  Due Soon
+                </StatusBadge>
+              )}
             </div>
-          )}
+            {isLoadingData ? (
+              <Skeleton height="36px" width="160px" />
+            ) : (
+              <p
+                className="text-page-heading tabular-nums"
+                style={{
+                  color: Number(dashboardStats.upcomingBills || 0) > 0 ? 'var(--fs-warning-bright, #F5CF80)' : 'var(--fs-text, #F5F4EC)',
+                }}
+              >
+                ₹{Number(dashboardStats.upcomingBills || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              </p>
+            )}
+            <p className="text-secondary" style={{ fontSize: '0.85rem', marginTop: '0.25rem' }}>
+              Unpaid bills due in 30 days
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* 3. PROTECT Pillar */}
-      <section aria-label="Protection and Scam Checking">
-        <ScamChecker onAnnounce={handleAnnounce} />
-      </section>
-
-      {/* 4. DECIDE Pillar (Goals) */}
-      <section aria-label="Financial Goals">
+      {/* 4. FINANCIAL GOALS (DECIDE PILLAR) */}
+      <section aria-label="Savings Goals">
         <GoalTracker goals={dashboardStats.goals || []} onAnnounce={handleAnnounce} />
       </section>
 
-      {/* 5. UPLOAD DOCUMENTS */}
-      <section aria-label="Upload Documents">
-        <DocumentUpload onAnnounce={handleAnnounce} onRefresh={refreshFinancialData} />
-      </section>
-
-      {/* 6. RECENT ACTIVITY */}
-      <section aria-label="Recent Activity">
+      {/* 5. RECENT TRANSACTION ACTIVITY */}
+      <section aria-labelledby="recent-activity-heading">
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '1.5rem',
+            marginBottom: '1rem',
             flexWrap: 'wrap',
-            gap: '0.5rem',
+            gap: '0.75rem',
           }}
         >
-          <h2
-            id="recent-activity-heading"
-            className="text-section-heading"
-            style={{
-              color: 'var(--color-text-muted)',
-              fontSize: '1rem',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-              margin: 0,
-            }}
-          >
-            Recent Activity
-          </h2>
+          <div>
+            <h2
+              id="recent-activity-heading"
+              className="text-meta"
+              style={{
+                color: 'var(--fs-text-muted, #71817A)',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                fontWeight: 700,
+                margin: 0,
+              }}
+            >
+              Recent Ledger Activity
+            </h2>
+          </div>
+
           <button
             type="button"
             className="btn btn-secondary"
             onClick={handleSyncBank}
-            style={{ padding: '8px 16px', fontSize: '0.875rem', borderRadius: '20px' }}
-            aria-label="Synchronize Bank Feed"
+            disabled={isSyncingBank}
+            style={{
+              padding: '6px 14px',
+              fontSize: '0.85rem',
+              minHeight: '38px',
+              borderRadius: 'var(--fs-radius-full, 9999px)',
+            }}
+            aria-label="Synchronize live bank feed"
           >
-            🔄 Sync Bank Feed
+            <RefreshCw size={14} className={isSyncingBank ? 'spin' : ''} aria-hidden="true" />
+            <span>{isSyncingBank ? 'Syncing...' : 'Sync Bank Feed'}</span>
           </button>
         </div>
-        <TransactionList transactions={transactions} />
+
+        {isLoadingData ? (
+          <div className="card flex-col gap-3">
+            <Skeleton height="32px" width="100%" />
+            <Skeleton height="32px" width="100%" />
+            <Skeleton height="32px" width="100%" />
+          </div>
+        ) : (
+          <TransactionList transactions={transactions} />
+        )}
+      </section>
+
+      {/* 6. SECURITY & SCAM SHIELD (PROTECT PILLAR) */}
+      <section aria-label="Security and Fraud Shield">
+        <ScamChecker onAnnounce={handleAnnounce} />
+      </section>
+
+      {/* 7. BANK STATEMENT INGESTION (DOCUMENTS) */}
+      <section aria-label="Document Ingestion and Scanner">
+        <DocumentUpload onAnnounce={handleAnnounce} onRefresh={refreshFinancialData} />
       </section>
     </AccessibleDashboard>
   );
