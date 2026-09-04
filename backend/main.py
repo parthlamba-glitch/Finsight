@@ -103,6 +103,11 @@ app.include_router(payments.router)
 app.include_router(voice.router)
 
 
+@app.get("/", status_code=status.HTTP_200_OK, tags=["Health"])
+def root():
+    return {"status": "ok", "service": "finsight-backend"}
+
+
 @app.get("/health", status_code=status.HTTP_200_OK, tags=["Health"])
 @app.get("/api/v1/health", status_code=status.HTTP_200_OK, tags=["Health"])
 def health_check(db: Session = Depends(get_db)):
