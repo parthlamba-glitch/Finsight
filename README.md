@@ -510,7 +510,7 @@ Make sure you have:
 ### 1. Clone the Repository
 
 ```bash
-git clone <YOUR_REPOSITORY_URL>
+git clone https://github.com/parthlamba-glitch/Finsight/tree/main
 cd FinSight
 ```
 
