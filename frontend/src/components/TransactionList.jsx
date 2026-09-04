@@ -10,41 +10,51 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   CircleDollarSign,
+  Briefcase,
 } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 
 /**
- * Helper to resolve category iconography
+ * Helper to resolve merchant & category iconography
  */
 function getCategoryIcon(category, isCredit) {
-  if (isCredit) return <ArrowDownLeft size={16} />;
+  if (isCredit) return <ArrowDownLeft size={18} color="var(--fs-accent)" />;
 
   switch (category?.toLowerCase()) {
     case 'food':
-      return <Utensils size={16} />;
+    case 'dining':
+      return <Utensils size={18} />;
     case 'transport':
-      return <Car size={16} />;
+    case 'travel':
+      return <Car size={18} />;
     case 'shopping':
-      return <ShoppingBag size={16} />;
+    case 'groceries':
+      return <ShoppingBag size={18} />;
     case 'bills':
-      return <Receipt size={16} />;
+    case 'utilities':
+      return <Receipt size={18} />;
     case 'entertainment':
-      return <Film size={16} />;
+      return <Film size={18} />;
     case 'healthcare':
-      return <HeartPulse size={16} />;
+    case 'health':
+      return <HeartPulse size={18} />;
     case 'education':
-      return <GraduationCap size={16} />;
+      return <GraduationCap size={18} />;
+    case 'salary':
+    case 'income':
+      return <Briefcase size={18} />;
     default:
-      return <ArrowUpRight size={16} />;
+      return <ArrowUpRight size={18} />;
   }
 }
 
 /**
  * TransactionList Component
- * Renders a clean, high-contrast financial ledger.
+ * Premium financial ledger with category iconography, tabular numerals,
+ * and accessible screen-reader descriptions.
  *
  * NON-NEGOTIABLE RULE:
- * Strictly displays backend-provided monetary values without computing balances or totals.
+ * Strictly displays backend-provided transaction facts without calculating balances or totals.
  */
 export default function TransactionList({ transactions = [] }) {
   // Show up to 8 most recent transactions in reverse chronological order
@@ -52,36 +62,38 @@ export default function TransactionList({ transactions = [] }) {
 
   if (displayTransactions.length === 0) {
     return (
-      <div
-        className="card"
-        style={{
-          textAlign: 'center',
-          padding: '2.5rem 1.5rem',
-          backgroundColor: 'var(--fs-surface-card, #0F251E)',
-        }}
-      >
-        <CircleDollarSign size={36} color="var(--fs-text-muted, #71817A)" style={{ marginBottom: '0.75rem' }} aria-hidden="true" />
-        <h3 className="text-card-heading" style={{ color: 'var(--fs-text, #F5F4EC)', marginBottom: '0.5rem' }}>
-          No Transactions Yet
+      <div className="ledger-container" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
+        <CircleDollarSign size={40} color="var(--fs-text-muted)" style={{ marginBottom: '1rem' }} aria-hidden="true" />
+        <h3 className="text-card-heading" style={{ color: 'var(--fs-text)', marginBottom: '0.5rem' }}>
+          No Transactions Recorded Yet
         </h3>
-        <p className="text-secondary" style={{ fontStyle: 'italic', margin: 0 }}>
-          Synchronize your bank feed or scan a bank statement to import your latest activity.
+        <p className="text-secondary" style={{ fontStyle: 'italic', margin: 0, maxWidth: '420px', marginInline: 'auto' }}>
+          Connect your live bank feed or scan a bank statement above to import your financial ledger.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="card" style={{ padding: '1.25rem 1.5rem' }}>
-      <ul
-        style={{
-          listStyle: 'none',
-          padding: 0,
-          margin: 0,
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
+    <div className="ledger-container" aria-labelledby="ledger-title">
+      {/* Ledger Header */}
+      <div className="ledger-header">
+        <div>
+          <h2 id="ledger-title" className="text-card-heading" style={{ color: 'var(--fs-text)', margin: 0 }}>
+            Recent Transactions
+          </h2>
+          <span className="text-meta" style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Authoritative Account Ledger
+          </span>
+        </div>
+
+        <StatusBadge variant="neutral">
+          Showing Last {displayTransactions.length} Entries
+        </StatusBadge>
+      </div>
+
+      {/* Ledger Table Rows */}
+      <div role="table" aria-label="Recent Account Transactions" className="flex-col">
         {displayTransactions.map((t, idx) => {
           const dateObj = new Date(t.transaction_date);
           const dateStr = dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
@@ -95,38 +107,25 @@ export default function TransactionList({ transactions = [] }) {
           const categoryName = t.category || 'General';
 
           return (
-            <li
+            <div
               key={t.id || idx}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '1rem 0',
-                borderBottom: idx !== displayTransactions.length - 1 ? '1px solid var(--fs-border-subtle, #142E25)' : 'none',
-                gap: '1rem',
-              }}
+              role="row"
+              className="ledger-row"
             >
-              {/* Full context accessible text for screen readers */}
+              {/* Accessible description for screen readers */}
               <span className="sr-only">
-                {merchantTitle}. {dateStr}. Category: {categoryName}. Amount: {isCredit ? 'Plus ' : 'Minus '}{absVal} rupees.
+                {merchantTitle}. Date: {dateStr}. Category: {categoryName}. Amount: {isCredit ? 'Credit of ' : 'Debit of '}{absVal} rupees.
               </span>
 
-              {/* Left Item Details */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }} aria-hidden="true">
+              {/* Left Column: Merchant Icon & Meta */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }} aria-hidden="true">
                 <div
+                  className="ledger-merchant-icon"
                   style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: 'var(--fs-radius-md, 14px)',
                     backgroundColor: isCredit
-                      ? 'var(--fs-success-surface, rgba(141, 219, 146, 0.12))'
-                      : 'var(--fs-surface-elevated, #132D24)',
-                    color: isCredit ? 'var(--fs-success, #8DDB92)' : 'var(--fs-text-secondary, #AAB8B1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                    border: '1px solid var(--fs-border-subtle, #142E25)',
+                      ? 'var(--fs-success-surface)'
+                      : 'var(--fs-surface-elevated)',
+                    color: isCredit ? 'var(--fs-accent)' : 'var(--fs-text-secondary)',
                   }}
                 >
                   {getCategoryIcon(categoryName, isCredit)}
@@ -137,7 +136,7 @@ export default function TransactionList({ transactions = [] }) {
                     className="text-body"
                     style={{
                       fontWeight: 600,
-                      color: 'var(--fs-text, #F5F4EC)',
+                      color: 'var(--fs-text)',
                       margin: 0,
                       fontSize: '0.975rem',
                     }}
@@ -148,32 +147,32 @@ export default function TransactionList({ transactions = [] }) {
                     <span className="text-secondary" style={{ fontSize: '0.825rem' }}>
                       {dateStr}
                     </span>
-                    <span style={{ color: 'var(--fs-border, #1B382E)' }}>•</span>
-                    <StatusBadge variant="neutral" showDot={false}>
+                    <span style={{ color: 'var(--fs-border-hover)' }}>•</span>
+                    <span className="text-meta" style={{ color: 'var(--fs-text-muted)' }}>
                       {categoryName}
-                    </StatusBadge>
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Right Monetary Amount */}
+              {/* Right Column: Signed Monetary Amount */}
               <div
                 aria-hidden="true"
                 className="tabular-nums"
                 style={{
                   fontWeight: 700,
-                  fontSize: '1rem',
-                  color: isCredit ? 'var(--fs-accent, #8DDB92)' : 'var(--fs-text, #F5F4EC)',
+                  fontSize: '1.05rem',
+                  color: isCredit ? 'var(--fs-accent)' : 'var(--fs-text)',
                   textAlign: 'right',
                   whiteSpace: 'nowrap',
                 }}
               >
                 {amountDisplay}
               </div>
-            </li>
+            </div>
           );
         })}
-      </ul>
+      </div>
     </div>
   );
 }

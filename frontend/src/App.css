@@ -1,184 +1,568 @@
-.counter {
-  font-size: 16px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  color: var(--accent);
-  background: var(--accent-bg);
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
-  margin-bottom: 24px;
+/* =========================================================================
+   FinSight Application Master Stylesheet (App.css)
+   Ultra-premium Fintech UI/UX, Calm Motion, Responsive Breakpoints (390px - 1440px)
+   ========================================================================= */
 
-  &:hover {
-    border-color: var(--accent-border);
-  }
-  &:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-}
+@import './styles/designTokens.css';
+@import './styles/accessibility.css';
+@import './styles/orb.css';
 
-.hero {
-  position: relative;
-
-  .base,
-  .framework,
-  .vite {
-    inset-inline: 0;
-    margin: 0 auto;
-  }
-
-  .base {
-    width: 170px;
-    position: relative;
-    z-index: 0;
-  }
-
-  .framework,
-  .vite {
-    position: absolute;
-  }
-
-  .framework {
-    z-index: 1;
-    top: 34px;
-    height: 28px;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
-      scale(1.4);
-  }
-
-  .vite {
-    z-index: 0;
-    top: 107px;
-    height: 26px;
-    width: auto;
-    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
-      scale(0.8);
-  }
-}
-
-#center {
+/* =========================================================================
+   1. App Layout & Shell
+   ========================================================================= */
+.app-shell {
+  min-height: 100vh;
+  background-color: var(--fs-bg);
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(141, 219, 146, 0.06), transparent 70%),
+    radial-gradient(circle at 100% 100%, rgba(13, 33, 27, 0.5), transparent 40%);
+  color: var(--fs-text);
   display: flex;
   flex-direction: column;
-  gap: 25px;
-  place-content: center;
-  place-items: center;
-  flex-grow: 1;
-
-  @media (max-width: 1024px) {
-    padding: 32px 20px 24px;
-    gap: 18px;
-  }
 }
 
-#next-steps {
-  display: flex;
-  border-top: 1px solid var(--border);
-  text-align: left;
-
-  & > div {
-    flex: 1 1 0;
-    padding: 32px;
-    @media (max-width: 1024px) {
-      padding: 24px 20px;
-    }
-  }
-
-  .icon {
-    margin-bottom: 16px;
-    width: 22px;
-    height: 22px;
-  }
-
-  @media (max-width: 1024px) {
-    flex-direction: column;
-    text-align: center;
-  }
-}
-
-#docs {
-  border-right: 1px solid var(--border);
-
-  @media (max-width: 1024px) {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-}
-
-#next-steps ul {
-  list-style: none;
-  padding: 0;
-  display: flex;
-  gap: 8px;
-  margin: 32px 0 0;
-
-  .logo {
-    height: 18px;
-  }
-
-  a {
-    color: var(--text-h);
-    font-size: 16px;
-    border-radius: 6px;
-    background: var(--social-bg);
-    display: flex;
-    padding: 6px 12px;
-    align-items: center;
-    gap: 8px;
-    text-decoration: none;
-    transition: box-shadow 0.3s;
-
-    &:hover {
-      box-shadow: var(--shadow);
-    }
-    .button-icon {
-      height: 18px;
-      width: 18px;
-    }
-  }
-
-  @media (max-width: 1024px) {
-    margin-top: 20px;
-    flex-wrap: wrap;
-    justify-content: center;
-
-    li {
-      flex: 1 1 calc(50% - 8px);
-    }
-
-    a {
-      width: 100%;
-      justify-content: center;
-      box-sizing: border-box;
-    }
-  }
-}
-
-#spacer {
-  height: 88px;
-  border-top: 1px solid var(--border);
-  @media (max-width: 1024px) {
-    height: 48px;
-  }
-}
-
-.ticks {
-  position: relative;
+.main-content-container {
+  max-width: 1080px;
   width: 100%;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.25rem;
+}
 
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    top: -4.5px;
-    border: 5px solid transparent;
+/* =========================================================================
+   2. Header & Navigation (AccessibleDashboard)
+   ========================================================================= */
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background-color: rgba(7, 21, 16, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--fs-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+}
+
+.brand-emblem {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--fs-radius-sm);
+  background: linear-gradient(135deg, var(--fs-accent-bright), var(--fs-accent-dark));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 16px rgba(141, 219, 146, 0.3);
+}
+
+.brand-name {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--fs-text);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.header-user-status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--fs-surface);
+  border: 1px solid var(--fs-border);
+  padding: 6px 14px;
+  border-radius: var(--fs-radius-full);
+  font-size: var(--fs-font-secondary);
+  color: var(--fs-text);
+}
+
+/* =========================================================================
+   3. Hero Balance Card (Primary Financial Anchor)
+   ========================================================================= */
+.hero-balance-section {
+  position: relative;
+  border-radius: var(--fs-radius-lg);
+  background: linear-gradient(165deg, #0E2920 0%, #081B15 50%, #06140F 100%);
+  border: 1px solid rgba(141, 219, 146, 0.22);
+  box-shadow: var(--fs-shadow-md), 0 0 32px rgba(141, 219, 146, 0.08);
+  padding: 2.5rem 2.25rem;
+  overflow: hidden;
+  transition: border-color var(--fs-transition-normal);
+}
+
+.hero-balance-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(141, 219, 146, 0.4), transparent);
+}
+
+.hero-balance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.hero-label-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.hero-balance-eyebrow {
+  font-size: var(--fs-font-meta);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 700;
+  color: var(--fs-accent);
+}
+
+.hero-balance-greeting {
+  font-size: var(--fs-font-heading-sm);
+  color: var(--fs-text);
+  font-weight: 600;
+}
+
+.hero-balance-amount-display {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0.5rem 0 1.25rem;
+}
+
+.hero-balance-figure {
+  font-size: clamp(2.75rem, 6.5vw, 4rem);
+  font-weight: 700;
+  color: var(--fs-text);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-balance-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--fs-border-subtle);
+}
+
+.hero-submetric-text {
+  font-size: var(--fs-font-secondary);
+  color: var(--fs-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* =========================================================================
+   4. Financial Pulse Deck (Metric Row)
+   ========================================================================= */
+.pulse-deck-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+}
+
+.pulse-card {
+  background-color: var(--fs-surface-card);
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-lg);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+  box-shadow: var(--fs-shadow-sm);
+  transition: transform var(--fs-transition-fast), border-color var(--fs-transition-fast), box-shadow var(--fs-transition-fast);
+}
+
+.pulse-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--fs-border-hover);
+  box-shadow: var(--fs-shadow-md);
+}
+
+.pulse-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pulse-card-label {
+  font-size: var(--fs-font-meta);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+  color: var(--fs-text-muted);
+}
+
+.pulse-card-value {
+  font-size: var(--fs-font-heading-lg);
+  font-weight: 700;
+  color: var(--fs-text);
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.pulse-card-caption {
+  font-size: var(--fs-font-meta);
+  color: var(--fs-text-secondary);
+  margin: 0;
+}
+
+/* =========================================================================
+   5. Voice Copilot Centerpiece (ChatPanel)
+   ========================================================================= */
+.copilot-centerpiece {
+  background: linear-gradient(175deg, #102B21 0%, #0A1F18 40%, #06140F 100%);
+  border: 1.5px solid rgba(141, 219, 146, 0.28);
+  border-radius: var(--fs-radius-lg);
+  box-shadow: var(--fs-shadow-lg), 0 0 36px rgba(141, 219, 146, 0.12);
+  padding: 2.75rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.copilot-centerpiece::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 30%, rgba(141, 219, 146, 0.08), transparent 60%);
+  pointer-events: none;
+}
+
+.copilot-tagline {
+  font-size: var(--fs-font-meta);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 700;
+  color: var(--fs-accent);
+  margin-bottom: 0.35rem;
+}
+
+.copilot-title {
+  font-size: var(--fs-font-heading-md);
+  color: var(--fs-text);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.copilot-status-indicator {
+  min-height: 28px;
+  margin: 1rem 0;
+  font-size: var(--fs-font-body);
+  font-weight: 500;
+  color: var(--fs-text-secondary);
+}
+
+.copilot-trigger-zone {
+  margin: 1.25rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.copilot-answer-panel {
+  width: 100%;
+  max-width: 680px;
+  background-color: var(--fs-surface-elevated);
+  border: 1px solid var(--fs-border-hover);
+  border-radius: var(--fs-radius-md);
+  padding: 1.5rem 1.75rem;
+  text-align: left;
+  margin: 1.25rem 0;
+  box-shadow: var(--fs-shadow-md);
+  position: relative;
+  z-index: 2;
+}
+
+.copilot-answer-text {
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--fs-text);
+  margin: 0 0 1.25rem 0;
+}
+
+.copilot-quick-pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.6rem;
+  max-width: 720px;
+  margin-top: 1.5rem;
+}
+
+.quick-pill-btn {
+  background-color: var(--fs-surface);
+  color: var(--fs-text-secondary);
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-full);
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--fs-transition-fast);
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.quick-pill-btn:hover {
+  background-color: var(--fs-surface-hover);
+  color: var(--fs-text);
+  border-color: var(--fs-border-hover);
+  transform: translateY(-1px);
+}
+
+/* =========================================================================
+   6. Ledger & Transaction Styling (TransactionList)
+   ========================================================================= */
+.ledger-container {
+  background-color: var(--fs-surface-card);
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-lg);
+  padding: 1.5rem;
+  box-shadow: var(--fs-shadow-sm);
+}
+
+.ledger-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.ledger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--fs-border-subtle);
+  transition: background-color var(--fs-transition-fast);
+}
+
+.ledger-row:last-child {
+  border-bottom: none;
+}
+
+.ledger-merchant-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--fs-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--fs-border-subtle);
+}
+
+/* =========================================================================
+   7. Security Shield (ScamChecker)
+   ========================================================================= */
+.security-panel {
+  background-color: var(--fs-surface-card);
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-lg);
+  padding: 1.75rem;
+  box-shadow: var(--fs-shadow-sm);
+}
+
+.security-panel.high-risk {
+  border: 1.5px solid var(--fs-danger-border);
+  background: linear-gradient(175deg, rgba(224, 108, 117, 0.08) 0%, var(--fs-surface-card) 100%);
+}
+
+.indicator-chip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 10px 14px;
+  border-radius: var(--fs-radius-sm);
+  background-color: var(--fs-surface-elevated);
+  border: 1px solid var(--fs-border-subtle);
+}
+
+/* =========================================================================
+   8. Staged Document Upload Workflow (DocumentUpload)
+   ========================================================================= */
+.workflow-stepper {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.stepper-step {
+  padding: 8px 12px;
+  border-radius: var(--fs-radius-sm);
+  background-color: var(--fs-bg);
+  border: 1px solid var(--fs-border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fs-text-muted);
+}
+
+.stepper-step.active {
+  background-color: var(--fs-surface-elevated);
+  border-color: var(--fs-accent);
+  color: var(--fs-accent);
+}
+
+.stepper-step.completed {
+  color: var(--fs-text-secondary);
+  border-color: var(--fs-border);
+}
+
+/* =========================================================================
+   9. Authentication Split Screen Layout (Login)
+   ========================================================================= */
+.login-split-page {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  background-color: var(--fs-bg);
+}
+
+.login-brand-panel {
+  padding: 4rem 3.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: 
+    radial-gradient(ellipse 70% 60% at 20% 30%, rgba(141, 219, 146, 0.12), transparent 70%),
+    linear-gradient(165deg, #091C16 0%, #06130E 100%);
+  border-right: 1px solid var(--fs-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-brand-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(141, 219, 146, 0.1) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.login-form-panel {
+  padding: 3rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--fs-bg-elevated);
+}
+
+.auth-surface-box {
+  width: 100%;
+  max-width: 440px;
+  background-color: var(--fs-surface-card);
+  border: 1px solid var(--fs-border);
+  border-radius: var(--fs-radius-modal);
+  padding: 2.5rem 2rem;
+  box-shadow: var(--fs-shadow-lg);
+}
+
+/* =========================================================================
+   10. Responsive Breakpoints (390px, 768px, 1024px, 1280px)
+   ========================================================================= */
+@media (max-width: 1024px) {
+  .login-split-page {
+    grid-template-columns: 1fr;
   }
 
-  &::before {
-    left: 0;
-    border-left-color: var(--border);
+  .login-brand-panel {
+    padding: 3rem 2rem 2rem;
+    border-right: none;
+    border-bottom: 1px solid var(--fs-border);
   }
-  &::after {
-    right: 0;
-    border-right-color: var(--border);
+
+  .pulse-deck-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-stepper {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .main-content-container {
+    padding: 1.25rem 1rem 3rem;
+    gap: 1.75rem;
+  }
+
+  .hero-balance-section {
+    padding: 1.75rem 1.25rem;
+  }
+
+  .hero-balance-figure {
+    font-size: 2.75rem;
+  }
+
+  .copilot-centerpiece {
+    padding: 2rem 1.25rem;
+  }
+
+  .auth-surface-box {
+    padding: 2rem 1.5rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .main-content-container {
+    padding: 1rem 0.75rem 2.5rem;
+  }
+
+  .hero-balance-figure {
+    font-size: 2.25rem;
+  }
+
+  .btn-voice {
+    min-width: 60px;
+    min-height: 60px;
+    padding: 12px 24px;
+  }
+
+  .workflow-stepper {
+    grid-template-columns: 1fr;
   }
 }

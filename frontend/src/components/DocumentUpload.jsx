@@ -5,11 +5,11 @@ import StatusBadge from './StatusBadge';
 
 /**
  * DocumentUpload Component
- * Staged bank statement candidate ingestion workflow.
+ * 4-Stage bank statement ingestion workflow:
+ * 01 Select Statement -> 02 Processing -> 03 Review Candidates -> 04 Confirm Import
  *
- * CRITICAL BOUNDARY:
- * Explicitly separates "document processed (staged)" from "transactions committed".
- * Never marks candidates as committed to the authoritative ledger until the user confirms.
+ * CRITICAL SEPARATION:
+ * Explicitly marks extracted items as "NOT YET COMMITTED" until user confirms.
  */
 export default function DocumentUpload({ onAnnounce, onRefresh }) {
   const fileInputRef = useRef(null);
@@ -17,16 +17,19 @@ export default function DocumentUpload({ onAnnounce, onRefresh }) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
 
+  // Derive active workflow step: 1 (Select), 2 (Processing), 3 (Review), 4 (Confirmed)
+  const currentStep = isUploading ? 2 : uploadResult ? 3 : 1;
+
   const handleFileChange = async (e) => {
     const selected = e.target.files[0];
     if (!selected) return;
 
     setFile(selected);
     setIsUploading(true);
-    if (onAnnounce) onAnnounce(`Extracting transaction candidates from ${selected.name}...`);
+    if (onAnnounce) onAnnounce(`Processing and extracting candidates from ${selected.name}...`);
 
     try {
-      // Extracted statement candidates matching the current ingestion schema
+      // Extracted candidates adhering to backend ingestion schema
       const mockExtractedCandidates = [
         {
           amount: 450.5,
@@ -94,52 +97,74 @@ export default function DocumentUpload({ onAnnounce, onRefresh }) {
   };
 
   return (
-    <section className="card" aria-labelledby="doc-upload-heading">
+    <section className="card" aria-labelledby="statement-upload-heading">
       {/* 1. Header */}
-      <div className="flex-between" style={{ marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+      <div className="flex-between" style={{ marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div
             style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: 'var(--fs-radius-sm, 8px)',
-              backgroundColor: 'var(--fs-accent-surface, rgba(141, 219, 146, 0.12))',
-              color: 'var(--fs-accent, #8DDB92)',
+              width: '40px',
+              height: '40px',
+              borderRadius: 'var(--fs-radius-md)',
+              backgroundColor: 'var(--fs-accent-surface)',
+              color: 'var(--fs-accent)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              border: '1px solid rgba(141, 219, 146, 0.25)',
             }}
           >
-            <FileText size={20} aria-hidden="true" />
+            <FileText size={22} aria-hidden="true" />
           </div>
           <div>
-            <h2 id="doc-upload-heading" className="text-card-heading" style={{ color: 'var(--fs-text, #F5F4EC)', margin: 0 }}>
-              Bank Statement Ingestion
+            <h2 id="statement-upload-heading" className="text-card-heading" style={{ color: 'var(--fs-text)', margin: 0 }}>
+              Statement Import Workflow
             </h2>
             <p className="text-meta" style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Staged Document Extraction
+              Staged Document Ingestion
             </p>
           </div>
         </div>
 
         {uploadResult && (
-          <StatusBadge variant="warning" icon={<Clock size={12} />}>
+          <StatusBadge variant="warning" icon={<Clock size={13} />}>
             Staged · Not Yet Committed
           </StatusBadge>
         )}
       </div>
 
-      {/* 2. Upload Dropzone / Trigger */}
-      {!file ? (
+      {/* 2. 4-Stage Workflow Step Indicator */}
+      <div className="workflow-stepper" aria-label="Statement Ingestion Progress">
+        <div className={`stepper-step ${currentStep === 1 ? 'active' : currentStep > 1 ? 'completed' : ''}`}>
+          <span>01</span>
+          <span>Select Statement</span>
+        </div>
+        <div className={`stepper-step ${currentStep === 2 ? 'active' : currentStep > 2 ? 'completed' : ''}`}>
+          <span>02</span>
+          <span>Processing</span>
+        </div>
+        <div className={`stepper-step ${currentStep === 3 ? 'active' : currentStep > 3 ? 'completed' : ''}`}>
+          <span>03</span>
+          <span>Review Candidates</span>
+        </div>
+        <div className={`stepper-step ${currentStep === 4 ? 'active' : ''}`}>
+          <span>04</span>
+          <span>Confirm Import</span>
+        </div>
+      </div>
+
+      {/* 3. Stage 01: File Selection Dropzone */}
+      {!file && (
         <div
           className="flex-col flex-center gap-3"
           style={{
             textAlign: 'center',
-            padding: '2.5rem 1.5rem',
-            border: '2px dashed var(--fs-border-hover, #2B5748)',
-            borderRadius: 'var(--fs-radius-md, 14px)',
-            backgroundColor: 'var(--fs-bg, #071510)',
+            padding: '3rem 1.5rem',
+            border: '2px dashed var(--fs-border-hover)',
+            borderRadius: 'var(--fs-radius-md)',
+            backgroundColor: 'var(--fs-bg)',
             cursor: 'pointer',
+            transition: 'border-color var(--fs-transition-fast)',
           }}
           onClick={() => fileInputRef.current?.click()}
           onKeyDown={(e) => {
@@ -147,29 +172,29 @@ export default function DocumentUpload({ onAnnounce, onRefresh }) {
           }}
           tabIndex={0}
           role="button"
-          aria-label="Upload bank statement file. Supported formats: PDF, JPG, or PNG."
+          aria-label="Upload bank statement document. PDF, JPG, or PNG files supported."
         >
           <div
             style={{
-              width: '48px',
-              height: '48px',
+              width: '52px',
+              height: '52px',
               borderRadius: '50%',
-              backgroundColor: 'var(--fs-surface-elevated, #132D24)',
+              backgroundColor: 'var(--fs-surface-elevated)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--fs-accent, #8DDB92)',
+              color: 'var(--fs-accent)',
             }}
           >
             <Upload size={24} aria-hidden="true" />
           </div>
 
           <div>
-            <p className="text-body" style={{ fontWeight: 600, color: 'var(--fs-text, #F5F4EC)', marginBottom: '0.25rem' }}>
-              Upload bank statement for extraction
+            <p className="text-body" style={{ fontWeight: 600, color: 'var(--fs-text)', marginBottom: '0.25rem' }}>
+              Select or drop bank statement for extraction
             </p>
             <p className="text-secondary" style={{ fontSize: '0.875rem', margin: 0 }}>
-              PDF, JPG, or PNG files supported
+              Supported: PDF, JPG, PNG (Max 15MB)
             </p>
           </div>
 
@@ -182,47 +207,51 @@ export default function DocumentUpload({ onAnnounce, onRefresh }) {
             aria-hidden="true"
           />
         </div>
-      ) : isUploading ? (
-        /* 3. Processing State */
+      )}
+
+      {/* 4. Stage 02: Processing State */}
+      {isUploading && (
         <div
           className="flex-col flex-center gap-3"
           style={{
-            padding: '2.5rem 1.5rem',
+            padding: '3rem 1.5rem',
             textAlign: 'center',
-            backgroundColor: 'var(--fs-bg, #071510)',
-            borderRadius: 'var(--fs-radius-md, 14px)',
+            backgroundColor: 'var(--fs-bg)',
+            borderRadius: 'var(--fs-radius-md)',
           }}
           role="status"
           aria-live="polite"
         >
           <div className="skeleton" style={{ width: '48px', height: '48px', borderRadius: '50%' }} />
-          <p className="text-body" style={{ fontWeight: 600, color: 'var(--fs-text, #F5F4EC)' }}>
-            Analyzing and deduplicating statement...
+          <p className="text-body" style={{ fontWeight: 600, color: 'var(--fs-text)', margin: 0 }}>
+            Extracting and deduplicating statement transactions...
           </p>
-          <p className="text-secondary" style={{ fontSize: '0.875rem' }}>
-            Reading {file.name}
+          <p className="text-secondary" style={{ fontSize: '0.875rem', margin: 0 }}>
+            Reading {file?.name}
           </p>
         </div>
-      ) : (
-        /* 4. Candidate Review & Explicit Confirmation View */
+      )}
+
+      {/* 5. Stage 03: Review Candidates & Explicit Confirmation */}
+      {uploadResult && !isUploading && (
         <div className="flex-col gap-4">
-          {/* Staging Notice Banner */}
+          {/* Explicit Staging Notice */}
           <div
             style={{
-              padding: '0.85rem 1rem',
-              borderRadius: 'var(--fs-radius-sm, 8px)',
-              backgroundColor: 'var(--fs-warning-surface, rgba(230, 184, 92, 0.12))',
-              border: '1px solid var(--fs-warning-border, rgba(230, 184, 92, 0.35))',
+              padding: '1rem 1.25rem',
+              borderRadius: 'var(--fs-radius-sm)',
+              backgroundColor: 'var(--fs-warning-surface)',
+              border: '1px solid var(--fs-warning-border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: '1rem',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <AlertTriangle size={18} color="var(--fs-warning, #E6B85C)" aria-hidden="true" />
-              <span className="text-body" style={{ fontSize: '0.9rem', color: 'var(--fs-warning-bright, #F5CF80)' }}>
-                <strong>Staged Candidates Only:</strong> Transactions will not appear in your balance until you click Confirm.
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <AlertTriangle size={18} color="var(--fs-warning)" aria-hidden="true" />
+              <span className="text-body" style={{ fontSize: '0.925rem', color: 'var(--fs-warning-bright)' }}>
+                <strong>STAGED CANDIDATES ONLY:</strong> These transactions are not yet committed to your balance until you confirm below.
               </span>
             </div>
 
@@ -232,7 +261,7 @@ export default function DocumentUpload({ onAnnounce, onRefresh }) {
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: 'var(--fs-text-muted, #71817A)',
+                color: 'var(--fs-text-muted)',
                 cursor: 'pointer',
                 padding: '4px',
               }}
@@ -242,7 +271,7 @@ export default function DocumentUpload({ onAnnounce, onRefresh }) {
             </button>
           </div>
 
-          {/* Extraction Summary Stats */}
+          {/* Metrics Summary */}
           <div
             style={{
               display: 'grid',
@@ -251,34 +280,34 @@ export default function DocumentUpload({ onAnnounce, onRefresh }) {
               textAlign: 'center',
             }}
           >
-            <div className="card-elevated" style={{ padding: '0.75rem' }}>
-              <span className="text-meta" style={{ textTransform: 'uppercase' }}>Total Found</span>
-              <p className="text-section-heading tabular-nums" style={{ color: 'var(--fs-text, #F5F4EC)' }}>
+            <div className="card-elevated" style={{ padding: '0.85rem' }}>
+              <span className="text-meta" style={{ textTransform: 'uppercase' }}>Extracted</span>
+              <p className="text-section-heading tabular-nums" style={{ color: 'var(--fs-text)', marginTop: '0.2rem' }}>
                 {uploadResult.total_candidates}
               </p>
             </div>
 
-            <div className="card-elevated" style={{ padding: '0.75rem' }}>
-              <span className="text-meta" style={{ textTransform: 'uppercase' }}>Ready to Add</span>
-              <p className="text-section-heading tabular-nums" style={{ color: 'var(--fs-accent, #8DDB92)' }}>
+            <div className="card-elevated" style={{ padding: '0.85rem' }}>
+              <span className="text-meta" style={{ textTransform: 'uppercase' }}>Valid Candidates</span>
+              <p className="text-section-heading tabular-nums" style={{ color: 'var(--fs-accent)', marginTop: '0.2rem' }}>
                 {uploadResult.valid_candidates_count}
               </p>
             </div>
 
-            <div className="card-elevated" style={{ padding: '0.75rem' }}>
+            <div className="card-elevated" style={{ padding: '0.85rem' }}>
               <span className="text-meta" style={{ textTransform: 'uppercase' }}>Duplicates Skipped</span>
-              <p className="text-section-heading tabular-nums" style={{ color: 'var(--fs-warning, #E6B85C)' }}>
+              <p className="text-section-heading tabular-nums" style={{ color: 'var(--fs-warning)', marginTop: '0.2rem' }}>
                 {uploadResult.duplicate_candidates_count}
               </p>
             </div>
           </div>
 
-          {/* Staged Candidates List */}
+          {/* Candidates List */}
           <div
             style={{
-              backgroundColor: 'var(--fs-bg, #071510)',
-              borderRadius: 'var(--fs-radius-md, 14px)',
-              border: '1px solid var(--fs-border, #1B382E)',
+              backgroundColor: 'var(--fs-bg)',
+              borderRadius: 'var(--fs-radius-md)',
+              border: '1px solid var(--fs-border)',
               padding: '1rem',
             }}
           >
@@ -294,19 +323,19 @@ export default function DocumentUpload({ onAnnounce, onRefresh }) {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '0.75rem',
-                      borderRadius: 'var(--fs-radius-sm, 8px)',
-                      backgroundColor: 'var(--fs-surface-elevated, #132D24)',
+                      padding: '0.85rem 1rem',
+                      borderRadius: 'var(--fs-radius-sm)',
+                      backgroundColor: 'var(--fs-surface-elevated)',
                       opacity: isDup ? 0.6 : 1,
-                      border: isDup ? '1px dashed var(--fs-border, #1B382E)' : '1px solid transparent',
+                      border: isDup ? '1px dashed var(--fs-border)' : '1px solid transparent',
                     }}
                   >
                     <div>
                       <p className="text-body" style={{ fontWeight: 600, fontSize: '0.95rem', margin: 0 }}>
                         {cand.merchant_name || cand.description}
                       </p>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem' }}>
-                        <span className="text-secondary" style={{ fontSize: '0.8rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                        <span className="text-secondary" style={{ fontSize: '0.825rem' }}>
                           {cand.category}
                         </span>
                         {isDup && (
@@ -317,7 +346,7 @@ export default function DocumentUpload({ onAnnounce, onRefresh }) {
                       </div>
                     </div>
 
-                    <div className="tabular-nums" style={{ fontWeight: 700, color: isCredit ? 'var(--fs-accent, #8DDB92)' : 'var(--fs-text, #F5F4EC)' }}>
+                    <div className="tabular-nums" style={{ fontWeight: 700, fontSize: '1rem', color: isCredit ? 'var(--fs-accent)' : 'var(--fs-text)' }}>
                       {isCredit ? '+' : '−'}₹{Number(cand.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </div>
                   </li>
@@ -326,7 +355,7 @@ export default function DocumentUpload({ onAnnounce, onRefresh }) {
             </ul>
           </div>
 
-          {/* Actions */}
+          {/* Action Row */}
           <div className="flex-row gap-3">
             <button
               type="button"
@@ -334,7 +363,7 @@ export default function DocumentUpload({ onAnnounce, onRefresh }) {
               onClick={handleConfirmImport}
               disabled={isUploading || uploadResult.valid_candidates_count === 0}
               style={{ flex: 1 }}
-              aria-label={`Confirm and record ${uploadResult.valid_candidates_count} valid transactions to account`}
+              aria-label={`Confirm import of ${uploadResult.valid_candidates_count} valid transactions to account`}
             >
               <CheckCircle2 size={18} aria-hidden="true" />
               <span>Confirm & Commit to Ledger</span>

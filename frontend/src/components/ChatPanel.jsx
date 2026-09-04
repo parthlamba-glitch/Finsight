@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Volume2, VolumeX, Send, Mic, Square } from 'lucide-react';
+import { Volume2, VolumeX, Send, Mic, Square, Sparkles } from 'lucide-react';
 import VoiceOrb from './VoiceOrb';
 
 /**
  * ChatPanel Component
- * Visual centerpiece for FinSight's Conversational AI Copilot.
- * Supports spoken audio, Web Speech API, quick prompt pills, and accessible keyboard entry.
+ * FinSight's Visual Centerpiece: Conversational Voice AI Copilot.
+ * Dedicated high-prominence surface with acoustic orb, state indicators,
+ * spoken response card, and quick query pills.
  */
 export default function ChatPanel({
   onQuerySubmit,
@@ -40,55 +41,37 @@ export default function ChatPanel({
     onQuerySubmit(query);
   };
 
-  const getStatusText = () => {
-    if (isProcessing) return 'Thinking and analyzing your financial ledger...';
-    if (isSpeaking) return 'FinSight is answering...';
-    if (isListening) return "Listening... Speak your question now.";
-    return 'Ask anything about your money';
+  const getStatusHeading = () => {
+    if (isProcessing) return 'Thinking & Analyzing Ledger...';
+    if (isSpeaking) return 'FinSight is Speaking...';
+    if (isListening) return 'Listening... Speak Your Question';
+    return 'Ask FinSight Anything About Your Money';
   };
 
   const QUICK_PROMPTS = [
     { label: 'Food spending last month', query: 'How much did I spend on food last month?' },
     { label: 'Can I afford ₹8,000 headphones?', query: 'Can I afford to buy headphones for ₹8,000?' },
     { label: 'Emergency Fund projection', query: 'When will I finish my Emergency Fund if I save ₹15,000 a month?' },
-    { label: 'Financial insights & trends', query: 'Show me my financial insights' },
+    { label: 'Show financial insights', query: 'Show me my financial insights and trends' },
   ];
 
   return (
     <section
-      className="card card-hero flex-col gap-6"
-      aria-label="FinSight Conversational Copilot"
-      style={{
-        textAlign: 'center',
-        padding: '2.5rem 1.5rem',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
+      className="copilot-centerpiece"
+      aria-label="FinSight Conversational Voice Copilot"
     >
-      {/* Copilot Header */}
-      <div>
-        <p
-          className="text-meta"
-          style={{
-            textTransform: 'uppercase',
-            letterSpacing: '1.5px',
-            fontWeight: 700,
-            color: 'var(--fs-accent, #8DDB92)',
-            marginBottom: '0.25rem',
-          }}
-        >
-          Intelligence Layer
+      {/* 1. Header & Section Label */}
+      <div style={{ position: 'relative', zIndex: 2 }}>
+        <p className="copilot-tagline">
+          Voice Intelligence Layer
         </p>
-        <h2
-          className="text-section-heading"
-          style={{ color: 'var(--fs-text, #F5F4EC)' }}
-        >
-          FinSight Copilot
+        <h2 className="copilot-title">
+          FinSight Voice Copilot
         </h2>
       </div>
 
-      {/* Acoustic Voice Orb */}
-      <div style={{ margin: '0.5rem 0' }}>
+      {/* 2. Central Prominent Acoustic Orb */}
+      <div style={{ margin: '0.75rem 0', position: 'relative', zIndex: 2 }}>
         <VoiceOrb
           isListening={isListening}
           isProcessing={isProcessing}
@@ -96,62 +79,87 @@ export default function ChatPanel({
         />
       </div>
 
-      {/* Accessible Live Status Heading */}
-      <div style={{ minHeight: '32px' }}>
+      {/* 3. Live State Indicator */}
+      <div className="copilot-status-indicator" style={{ position: 'relative', zIndex: 2 }}>
         <p
           className="text-body"
           style={{
-            fontWeight: 500,
-            color: isListening ? 'var(--fs-accent-bright, #A7E8A5)' : 'var(--fs-text-secondary, #AAB8B1)',
+            margin: 0,
+            fontWeight: 600,
+            fontSize: '1.05rem',
+            color: isListening
+              ? 'var(--fs-accent-bright)'
+              : isProcessing
+              ? 'var(--fs-text)'
+              : 'var(--fs-text-secondary)',
           }}
           aria-live="polite"
         >
-          {getStatusText()}
+          {getStatusHeading()}
         </p>
       </div>
 
-      {/* Spoken Answer Box */}
+      {/* 4. Large Primary Voice Control Trigger */}
+      <div className="copilot-trigger-zone" style={{ position: 'relative', zIndex: 2 }}>
+        <button
+          type="button"
+          className="btn btn-voice"
+          onClick={handleToggleMic}
+          disabled={isProcessing}
+          style={{
+            backgroundColor: isListening ? 'var(--fs-danger)' : 'var(--fs-accent)',
+            color: isListening ? '#FFFFFF' : 'var(--fs-bg)',
+            boxShadow: isListening ? '0 0 32px rgba(224, 108, 117, 0.45)' : '0 4px 24px rgba(141, 219, 146, 0.35)',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            cursor: isProcessing ? 'wait' : 'pointer',
+          }}
+          aria-pressed={isListening}
+          aria-label={isListening ? 'Stop listening to microphone' : 'Start speaking with FinSight Copilot'}
+        >
+          {isListening ? (
+            <>
+              <Square size={22} aria-hidden="true" />
+              <span>Stop Listening</span>
+            </>
+          ) : (
+            <>
+              <Mic size={24} aria-hidden="true" />
+              <span>Tap to Speak</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* 5. Polished Response Surface (When Answer Exists) */}
       {answerText && !isListening && !isProcessing && (
         <div
-          className="card-elevated"
-          style={{
-            textAlign: 'left',
-            margin: '0.5rem 0',
-            border: '1px solid var(--fs-border-hover, #2B5748)',
-            backgroundColor: 'var(--fs-surface-elevated, #132D24)',
-          }}
+          className="copilot-answer-panel"
           role="region"
-          aria-label="Copilot Answer"
+          aria-label="FinSight Spoken Answer"
         >
-          <p
-            className="text-body"
-            style={{
-              fontSize: '1.05rem',
-              lineHeight: 1.6,
-              marginBottom: '1.25rem',
-              color: 'var(--fs-text, #F5F4EC)',
-            }}
-          >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
+            <Sparkles size={16} color="var(--fs-accent)" aria-hidden="true" />
+            <span className="text-meta" style={{ textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 700, color: 'var(--fs-accent)' }}>
+              Deterministic Ledger Answer
+            </span>
+          </div>
+
+          <p className="copilot-answer-text">
             {answerText}
           </p>
 
-          <div className="flex-row gap-3" style={{ flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <button
               type="button"
               className="btn btn-secondary"
               onClick={onReplay}
-              style={{
-                minHeight: '40px',
-                padding: '8px 16px',
-                fontSize: '14px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-              }}
-              aria-label="Replay spoken answer"
+              style={{ minHeight: '38px', padding: '6px 14px', fontSize: '13px' }}
+              aria-label="Replay spoken answer audio"
             >
-              <Volume2 size={16} aria-hidden="true" />
-              <span>Replay Voice</span>
+              <Volume2 size={15} color="var(--fs-accent)" aria-hidden="true" />
+              <span>Replay Audio</span>
             </button>
 
             {isSpeaking && (
@@ -159,17 +167,10 @@ export default function ChatPanel({
                 type="button"
                 className="btn btn-danger"
                 onClick={stopSpeaking}
-                style={{
-                  minHeight: '40px',
-                  padding: '8px 16px',
-                  fontSize: '14px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
-                aria-label="Stop audio narration"
+                style={{ minHeight: '38px', padding: '6px 14px', fontSize: '13px' }}
+                aria-label="Stop audio voice playback"
               >
-                <VolumeX size={16} aria-hidden="true" />
+                <VolumeX size={15} aria-hidden="true" />
                 <span>Stop Speaking</span>
               </button>
             )}
@@ -177,110 +178,72 @@ export default function ChatPanel({
         </div>
       )}
 
-      {/* Primary Voice Action Trigger */}
-      <div className="flex-center" style={{ marginTop: '0.5rem' }}>
-        <button
-          type="button"
-          className="btn btn-voice"
-          onClick={handleToggleMic}
-          style={{
-            backgroundColor: isListening ? 'var(--fs-danger, #E06C75)' : 'var(--fs-accent, #8DDB92)',
-            color: isListening ? '#FFFFFF' : 'var(--fs-bg, #071510)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            padding: '16px 36px',
-          }}
-          aria-pressed={isListening}
-          aria-label={isListening ? 'Stop listening to microphone' : 'Start speaking with microphone'}
-        >
-          {isListening ? (
-            <>
-              <Square size={20} aria-hidden="true" />
-              <span>Stop Listening</span>
-            </>
-          ) : (
-            <>
-              <Mic size={22} aria-hidden="true" />
-              <span>Start Speaking</span>
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Optional Keyboard / Text Input */}
+      {/* 6. Accessible Keyboard Query Input */}
       <form
         onSubmit={handleTextSubmit}
-        className="flex-row gap-2"
         style={{
+          display: 'flex',
+          gap: '0.5rem',
           maxWidth: '560px',
           width: '100%',
-          margin: '0.75rem auto 0 auto',
+          margin: '0.75rem 0',
+          position: 'relative',
+          zIndex: 2,
         }}
         role="search"
-        aria-label="Type a question for FinSight Copilot"
+        aria-label="Type question for FinSight"
       >
-        <label htmlFor="copilot-text-input" className="sr-only">
+        <label htmlFor="copilot-input" className="sr-only">
           Ask a financial question
         </label>
         <input
-          id="copilot-text-input"
+          id="copilot-input"
           type="text"
           value={textInput}
           onChange={(e) => setTextInput(e.target.value)}
           placeholder="Or type a question (e.g. 'Can I afford 5k?')..."
           disabled={isProcessing}
           style={{
-            backgroundColor: 'var(--fs-surface, #0D211B)',
+            backgroundColor: 'var(--fs-bg)',
+            border: '1px solid var(--fs-border)',
+            borderRadius: 'var(--fs-radius-md)',
             padding: '12px 16px',
-            fontSize: '15px',
+            fontSize: '14px',
           }}
         />
         <button
           type="submit"
           className="btn btn-secondary"
           disabled={isProcessing || !textInput.trim()}
-          style={{ minHeight: '48px', padding: '0 18px' }}
-          aria-label="Submit financial question"
+          style={{ minHeight: '46px', padding: '0 16px' }}
+          aria-label="Submit financial query"
         >
-          <Send size={18} aria-hidden="true" />
+          <Send size={16} aria-hidden="true" />
         </button>
       </form>
 
-      {/* Quick Prompts */}
+      {/* 7. Quick Inquiry Pills */}
       {!isListening && !isProcessing && !isSpeaking && !answerText && (
-        <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+        <div style={{ position: 'relative', zIndex: 2 }}>
           <p
             className="text-meta"
             style={{
-              marginBottom: '0.75rem',
               textTransform: 'uppercase',
               letterSpacing: '1px',
               fontWeight: 600,
+              color: 'var(--fs-text-muted)',
+              marginBottom: '0.75rem',
             }}
           >
-            Suggested Inquiries
+            Suggested Ledger Inquiries
           </p>
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              gap: '0.5rem',
-            }}
-          >
+          <div className="copilot-quick-pills">
             {QUICK_PROMPTS.map((prompt, idx) => (
               <button
                 key={idx}
                 type="button"
-                className="btn btn-secondary"
+                className="quick-pill-btn"
                 onClick={() => onQuerySubmit(prompt.query)}
-                style={{
-                  borderRadius: 'var(--fs-radius-full, 9999px)',
-                  padding: '8px 16px',
-                  fontSize: '13px',
-                  minHeight: '38px',
-                }}
               >
                 "{prompt.label}"
               </button>
