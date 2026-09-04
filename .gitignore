@@ -36,6 +36,9 @@ coverage.xml
 *.cover
 
 # ---------- SQLite / Local Databases ----------
+finsight.db
+backend/finsight.db
+backend/finsight_backup.db
 *.db
 *.sqlite
 *.sqlite3

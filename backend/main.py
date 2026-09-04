@@ -17,6 +17,16 @@ if str(_REPO_ROOT) not in sys.path:
 if str(_BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(_BACKEND_DIR))
 
+# Load project-root .env before any router or AI module is imported
+from dotenv import load_dotenv
+
+if (_REPO_ROOT / ".env").is_file():
+    load_dotenv(_REPO_ROOT / ".env")
+elif (_BACKEND_DIR / ".env").is_file():
+    load_dotenv(_BACKEND_DIR / ".env")
+else:
+    load_dotenv()
+
 from fastapi import FastAPI, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -70,7 +80,12 @@ app.add_middleware(PrefixStrippingMiddleware, prefix="/svc/api")
 # CORS middleware for frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -86,6 +101,11 @@ app.include_router(statements.router)
 app.include_router(ai.router)
 app.include_router(payments.router)
 app.include_router(voice.router)
+
+
+@app.get("/", status_code=status.HTTP_200_OK, tags=["Health"])
+def root():
+    return {"status": "ok", "service": "finsight-backend"}
 
 
 @app.get("/health", status_code=status.HTTP_200_OK, tags=["Health"])

@@ -16,12 +16,15 @@ NON-NEGOTIABLE ARCHITECTURAL RULES:
 
 from datetime import date, datetime
 from decimal import Decimal
+import logging
 import os
 import re
 from typing import Any, Callable, Dict, Optional, Union
 import uuid
 from openai import OpenAI
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from backend.db import SessionLocal
 from backend.models.user import User
@@ -140,6 +143,12 @@ class AIPipeline:
         api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
         has_live_key = bool(api_key and api_key not in ("your_api_key_here", "dummy_key_for_mocking", ""))
         execution_mode = "REAL_LLM" if has_live_key else "MOCK_FALLBACK"
+
+        if not has_live_key:
+            logger.warning(
+                "[AI Pipeline] LLM_API_KEY is not configured or is a placeholder. "
+                "Operating in MOCK_FALLBACK mode (local regex/keyword routing)."
+            )
 
         # 3. Intent Routing via LLMClient
         intent_info, route_err = LLMClient.call_tool_router(
