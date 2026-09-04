@@ -533,7 +533,9 @@ def _fast_path_match(query: str, context: Optional[Dict[str, Any]] = None) -> Op
     Preserves all schemas, parameters, and invariants without LLM latency.
     """
     q_clean = query.strip()
-    q_lower = q_clean.lower().rstrip(".?!,")
+    q_norm = q_clean.replace("’", "'").replace("‘", "'")
+    q_lower = q_norm.lower().rstrip(".?!, ").strip()
+    q_lower = re.sub(r"\bwhats\b", "what's", q_lower)
     ctx = context or {}
 
     # 1. Multi-turn clarification follow-ups
@@ -579,16 +581,32 @@ def _fast_path_match(query: str, context: Optional[Dict[str, Any]] = None) -> Op
         return {"status": "success", "function_name": "upload_document", "arguments": {}}
 
     # 4. Direct balance inquiries (unambiguous, no purchase/transfer/cost verbs)
-    balance_exact = {
-        "what's my balance", "what is my balance", "what is my account balance", "what's my account balance",
-        "what is my current balance", "what's my current balance",
-        "how much money do i have", "how much money do i have left", "how much money is in my account",
-        "how much is in my account", "check my balance", "check balance", "account balance", "balance",
-        "my balance", "current balance", "show my balance", "tell me my balance", "net worth",
-        "how much cash do i have", "kitna paisa hai", "mera balance kya hai", "balance kitna hai"
-    }
-    if q_lower in balance_exact or re.search(r"^(?:what(?:'s|\s+is)\s+(?:my\s+)?(?:current\s+)?(?:account\s+)?balance|check\s+(?:my\s+)?(?:current\s+)?balance|how\s+much\s+money\s+do\s+i\s+have(?:\s+left|\s+in\s+my\s+account)?)\??$", q_lower):
-        return {"status": "success", "function_name": "get_balance", "arguments": {}}
+    is_balance_excluded = bool(
+        re.search(
+            r"\b(?:afford|spend|spent|spending|cost|costs|costing|buy|buying|purchase|purchases|purchasing|send|sending|sent|transfer|transfers|transferring|pay|paying|paid|payment|payments)\b",
+            q_lower,
+        )
+    )
+
+    if not is_balance_excluded:
+        balance_match = re.search(
+            r"^(?:(?:can\s+you\s+|could\s+you\s+|please\s+)?(?:tell\s+me|show\s+me|check)\s+)?(?:what(?:'s|\s+is)\s+)?(?:my\s+|the\s+)?(?:current\s+)?(?:account\s+)?balance(?:\s+please)?$",
+            q_lower,
+        ) or re.search(
+            r"^how\s+much\s+(?:money\s+|cash\s+)?(?:do\s+i\s+have|is\s+in\s+my\s+account)(?:\s+left)?(?:\s+in\s+my\s+account)?(?:\s+please)?$",
+            q_lower,
+        )
+        balance_exact = {
+            "what's my balance", "what is my balance", "what is my account balance", "what's my account balance",
+            "what is my current balance", "what's my current balance",
+            "how much money do i have", "how much do i have", "how much money do i have left",
+            "how much money is in my account", "how much is in my account", "check my balance",
+            "check my account balance", "check balance", "account balance", "balance",
+            "my balance", "current balance", "show my balance", "tell me my balance", "tell me my balance please",
+            "net worth", "how much cash do i have", "kitna paisa hai", "mera balance kya hai", "balance kitna hai"
+        }
+        if q_lower in balance_exact or balance_match:
+            return {"status": "success", "function_name": "get_balance", "arguments": {}}
 
     # 5. Missing amount affordability check ("Can I afford it?")
     if q_lower in ("can i afford it", "can i afford it?", "can i afford this", "can i afford that", "should i buy it", "can i buy it", "is it affordable"):
