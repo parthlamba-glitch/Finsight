@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Key, ShieldCheck, LogOut, Sparkles } from 'lucide-react';
+import { Key, ShieldCheck, LogOut, Sparkles, User } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import StatusBadge from './StatusBadge';
 
 /**
  * AccessibleDashboard Component
  * Top-level application shell with accessibility skip-link,
- * FinSight brand header, passkey management, and ARIA live regions.
+ * sticky premium FinSight navbar, passkey management, and ARIA live announcements.
  */
 export default function AccessibleDashboard({ children, onAnnounce }) {
   const { user, logout, registerPasskey } = useAuth();
@@ -33,79 +33,50 @@ export default function AccessibleDashboard({ children, onAnnounce }) {
   };
 
   return (
-    <div className="container" style={{ padding: '1.5rem 1.25rem 3rem' }}>
+    <div className="app-shell">
       {/* 1. Accessibility Skip Link */}
       <a href="#main-content" className="skip-link">
-        Skip to main content
+        Skip to main financial content
       </a>
 
-      {/* 2. Application Header */}
-      <header
-        role="banner"
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          marginBottom: '2rem',
-          borderBottom: '1px solid var(--fs-border, #1B382E)',
-          paddingBottom: '1.25rem',
-        }}
-      >
-        {/* Brand Identity */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <span
-              style={{
-                width: '10px',
-                height: '10px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--fs-accent, #8DDB92)',
-                boxShadow: '0 0 10px var(--fs-accent, #8DDB92)',
-                display: 'inline-block',
-              }}
-              aria-hidden="true"
-            />
-            <h1
-              className="text-section-heading"
-              style={{
-                letterSpacing: '1.5px',
-                fontWeight: 700,
-                color: 'var(--fs-text, #F5F4EC)',
-                margin: 0,
-                fontSize: '1.25rem',
-                textTransform: 'uppercase',
-              }}
-            >
-              FIN•SIGHT
-            </h1>
+      {/* 2. Premium Sticky App Header */}
+      <header className="app-header" role="banner">
+        {/* Left: Brand Identity */}
+        <div className="header-brand">
+          <div className="brand-emblem" aria-hidden="true">
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#071510' }} />
           </div>
-          {user && (
-            <p className="text-secondary" style={{ fontSize: '0.875rem', marginTop: '0.35rem' }}>
-              Financial Copilot · <strong>{user.full_name}</strong>
-            </p>
-          )}
+          <div>
+            <span className="brand-name">FIN•SIGHT</span>
+            <span className="text-meta" style={{ display: 'block', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--fs-accent)' }}>
+              Deterministic Copilot
+            </span>
+          </div>
         </div>
 
-        {/* Security & Session Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          {!user?.has_passkey && (
+        {/* Right: User Status & Security Controls */}
+        <div className="header-user-status">
+          {user && (
+            <div className="user-badge" aria-label={`Logged in as ${user.full_name}`}>
+              <User size={14} color="var(--fs-accent)" aria-hidden="true" />
+              <span>{user.full_name}</span>
+            </div>
+          )}
+
+          {!user?.has_passkey ? (
             <button
               type="button"
               className="btn btn-secondary"
               onClick={handleAddPasskey}
               disabled={isRegisteringPasskey}
-              style={{ minHeight: '40px', padding: '6px 14px', fontSize: '0.85rem' }}
-              aria-label="Add Device Passkey for biometric sign in"
+              style={{ minHeight: '38px', padding: '6px 14px', fontSize: '13px' }}
+              aria-label="Register device biometric passkey"
             >
-              <Key size={16} aria-hidden="true" />
+              <Key size={15} color="var(--fs-accent)" aria-hidden="true" />
               <span>{isRegisteringPasskey ? 'Registering...' : 'Add Passkey'}</span>
             </button>
-          )}
-
-          {user?.has_passkey && (
-            <StatusBadge variant="success" icon={<ShieldCheck size={15} />}>
+          ) : (
+            <StatusBadge variant="success" icon={<ShieldCheck size={14} />}>
               Passkey Active
             </StatusBadge>
           )}
@@ -114,30 +85,35 @@ export default function AccessibleDashboard({ children, onAnnounce }) {
             type="button"
             className="btn btn-secondary"
             onClick={logout}
-            aria-label="Sign Out of FinSight"
-            style={{ minHeight: '40px', padding: '6px 14px', fontSize: '0.85rem' }}
+            aria-label="Sign out of FinSight account"
+            style={{ minHeight: '38px', padding: '6px 14px', fontSize: '13px' }}
           >
-            <LogOut size={16} aria-hidden="true" />
+            <LogOut size={15} aria-hidden="true" />
             <span>Sign Out</span>
           </button>
         </div>
       </header>
 
-      {/* Passkey Live Announcement Card */}
+      {/* 3. Passkey Status Notice Banner */}
       {passkeyNotice && (
         <div
-          className="card card-elevated"
-          style={{
-            marginBottom: '1.5rem',
-            padding: '1rem 1.25rem',
-            backgroundColor: 'var(--fs-accent-surface, rgba(141, 219, 146, 0.10))',
-            borderColor: 'var(--fs-accent, #8DDB92)',
-          }}
+          className="container"
+          style={{ padding: '1rem 1.25rem 0' }}
           role="status"
           aria-live="polite"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <Sparkles size={18} color="var(--fs-accent, #8DDB92)" aria-hidden="true" />
+          <div
+            className="card-elevated"
+            style={{
+              padding: '0.85rem 1.25rem',
+              backgroundColor: 'var(--fs-accent-surface)',
+              borderColor: 'var(--fs-accent)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+            }}
+          >
+            <Sparkles size={18} color="var(--fs-accent)" aria-hidden="true" />
             <p className="text-body" style={{ margin: 0, fontSize: '0.925rem' }}>
               {passkeyNotice}
             </p>
@@ -145,8 +121,8 @@ export default function AccessibleDashboard({ children, onAnnounce }) {
         </div>
       )}
 
-      {/* Main Content Landmark */}
-      <main id="main-content" className="flex-col gap-8" tabIndex={-1}>
+      {/* 4. Main Application Viewport Landmark */}
+      <main id="main-content" className="main-content-container" tabIndex={-1}>
         {children}
       </main>
     </div>

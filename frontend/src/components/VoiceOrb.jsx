@@ -3,10 +3,10 @@ import '../styles/orb.css';
 
 /**
  * VoiceOrb Component
- * Central intelligent acoustic indicator with 5 calm states:
+ * Visual signature acoustic sphere for FinSight with 5 distinct states:
  * IDLE, LISTENING, PROCESSING, SPEAKING, ERROR.
  *
- * Fully accessible with screen-reader text and prefers-reduced-motion support.
+ * Implements depth, concentric waveform rings, audio equalizer, and screen-reader accessibility.
  */
 export default function VoiceOrb({
   isListening = false,
@@ -15,62 +15,62 @@ export default function VoiceOrb({
   isError = false,
 }) {
   let state = 'IDLE';
-  let stateLabel = 'Ready';
+  let stateLabel = 'Ready to assist';
 
   if (isError) {
     state = 'ERROR';
-    stateLabel = 'Attention';
+    stateLabel = 'Attention required';
   } else if (isProcessing) {
     state = 'PROCESSING';
-    stateLabel = 'Thinking';
+    stateLabel = 'Analyzing ledger...';
   } else if (isSpeaking) {
     state = 'SPEAKING';
-    stateLabel = 'Answering';
+    stateLabel = 'FinSight is speaking';
   } else if (isListening) {
     state = 'LISTENING';
-    stateLabel = 'Listening';
+    stateLabel = 'Listening to voice...';
   }
+
+  const containerClass = state.toLowerCase();
 
   return (
     <div className="orb-wrapper" aria-hidden="true">
-      <div className={`orb-container ${isListening ? 'orb-listening' : ''}`}>
-        {/* Acoustic concentric rings for listening state */}
+      <div className={`orb-container ${containerClass}`}>
+        {/* Layer 1: Ambient Backdrop Aura */}
+        <div className="orb-ambient-aura" />
+
+        {/* Layer 2: Concentric Acoustic Waveform Rings (Listening) */}
         {state === 'LISTENING' && (
           <>
-            <div className="orb-ring orb-ring-1" />
-            <div className="orb-ring orb-ring-2" />
-            <div className="orb-ring orb-ring-3" />
+            <div className="acoustic-ring acoustic-ring-1" />
+            <div className="acoustic-ring acoustic-ring-2" />
+            <div className="acoustic-ring acoustic-ring-3" />
           </>
         )}
 
-        {/* Central Orb Core */}
-        <div
-          className={`orb ${
-            state === 'IDLE' ? 'orb-idle' :
-            state === 'PROCESSING' ? 'orb-processing' :
-            state === 'SPEAKING' ? 'orb-speaking' :
-            state === 'ERROR' ? 'orb-error' : ''
-          }`}
-        />
+        {/* Layer 3: Dashed Processing Orbit (Processing) */}
+        {state === 'PROCESSING' && (
+          <div className="processing-orbit" />
+        )}
+
+        {/* Layer 4: Central Sphere with Realistic Optical Depth */}
+        <div className={`orb-core ${containerClass}`} />
+
+        {/* Layer 5: Audio Equalizer Bars (Speaking) */}
+        {state === 'SPEAKING' && (
+          <div className="orb-speaking-eq">
+            <div className="eq-bar" />
+            <div className="eq-bar" />
+            <div className="eq-bar" />
+            <div className="eq-bar" />
+            <div className="eq-bar" />
+          </div>
+        )}
       </div>
 
-      {/* Speaking Equalizer Wave Bars */}
-      {state === 'SPEAKING' && (
-        <div className="orb-equalizer" aria-hidden="true">
-          <div className="eq-bar" />
-          <div className="eq-bar" />
-          <div className="eq-bar" />
-          <div className="eq-bar" />
-          <div className="eq-bar" />
-        </div>
-      )}
-
-      {/* Calm State Label Badge */}
-      <div className="orb-state-label">
-        <span
-          className={`orb-state-dot ${state.toLowerCase()}`}
-          aria-hidden="true"
-        />
+      {/* Layer 6: Visual & Screen-Reader Accessible Status Pill */}
+      <div className="orb-status-pill">
+        <span className={`orb-status-indicator-dot ${containerClass}`} />
         <span>{stateLabel}</span>
       </div>
     </div>
