@@ -68,6 +68,7 @@ def ask_financial_copilot(
             execution_mode=execution_mode,
             conversation_status=conv_status,
             conversation_id=result.get("conversation_id", request.conversation_id),
+            timing_ms=result.get("timing_ms"),
         )
 
     except ValueError as e:

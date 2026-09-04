@@ -23,6 +23,7 @@ import json
 import logging
 import os
 import re
+import time
 from typing import Any, Dict, Optional
 # pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
@@ -512,12 +513,121 @@ def _parse_amount_value(raw_val: Any) -> Optional[float]:
     return None
 
 
-def get_llm_client() -> OpenAI:
-    """Initialize OpenAI-compatible client from environment variables."""
-    api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or "dummy_key_for_mocking"
-    base_url = os.getenv("LLM_BASE_URL") or None
-    return OpenAI(api_key=api_key, base_url=base_url, timeout=30.0)
+_cached_llm_client: Optional[OpenAI] = None
 
+
+def get_llm_client() -> OpenAI:
+    """Initialize or reuse OpenAI-compatible client with connection pooling."""
+    global _cached_llm_client
+    if _cached_llm_client is None:
+        api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or "dummy_key_for_mocking"
+        base_url = os.getenv("LLM_BASE_URL") or None
+        _cached_llm_client = OpenAI(api_key=api_key, base_url=base_url, timeout=30.0)
+    return _cached_llm_client
+
+
+def _fast_path_match(query: str, context: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+    """
+    Fast-path deterministic router for unambiguous common financial queries and voice commands.
+    Returns standard router dict if matched, or None to fall through to LLM tool router.
+    Preserves all schemas, parameters, and invariants without LLM latency.
+    """
+    q_clean = query.strip()
+    q_lower = q_clean.lower().rstrip(".?!,")
+    ctx = context or {}
+
+    # 1. Multi-turn clarification follow-ups
+    if ctx.get("status") == "awaiting_clarification":
+        prev_intent = ctx.get("intent")
+        if prev_intent == "check_affordability":
+            amt = _parse_amount_value(query)
+            if amt and amt > 0:
+                item_desc = ctx.get("parameters", {}).get("item_description", "item")
+                return {
+                    "status": "success",
+                    "function_name": "check_affordability",
+                    "arguments": {"amount": amt, "item_description": item_desc},
+                }
+        elif prev_intent == "check_scam_message":
+            return {
+                "status": "success",
+                "function_name": "check_scam_message",
+                "arguments": {"message": query.strip()},
+            }
+
+    # 2. Payment confirmation in awaiting_confirmation state
+    if ctx.get("status") == "awaiting_confirmation" or ctx.get("confirmation_token") or ctx.get("pending_payment_id"):
+        if q_lower in ("yes", "confirm", "authorize", "proceed", "pay", "send it", "yes please", "confirm payment", "authorize payment"):
+            pid = str(ctx.get("confirmation_token") or ctx.get("pending_payment_id") or "1")
+            return {
+                "status": "success",
+                "function_name": "payment_execute",
+                "arguments": {"pending_payment_id": pid, "confirmation_token": pid},
+            }
+
+    # 3. UI Control commands
+    if q_lower in ("sync my bank", "sync bank", "sync my accounts", "refresh account", "refresh my account", "update my bank", "update bank", "bank update", "bank refresh", "mera bank sync karo"):
+        return {"status": "success", "function_name": "sync_bank", "arguments": {}}
+
+    if q_lower in ("read my recent transactions", "read recent transactions", "read my transactions", "read transactions", "show my recent transactions", "show recent transactions", "show my transactions", "what did i spend recently", "recent transactions"):
+        return {"status": "success", "function_name": "read_recent_transactions", "arguments": {}}
+
+    if q_lower in ("read my goals", "read goals", "tell me my goals", "show my goals", "show goals", "list my goals"):
+        return {"status": "success", "function_name": "read_goals", "arguments": {}}
+
+    if q_lower in ("upload document", "upload a document", "upload bank statement", "upload statement", "scan statement", "scan my statement", "upload my statement"):
+        return {"status": "success", "function_name": "upload_document", "arguments": {}}
+
+    # 4. Direct balance inquiries (unambiguous, no purchase/transfer/cost verbs)
+    balance_exact = {
+        "what's my balance", "what is my balance", "what is my account balance", "what's my account balance",
+        "what is my current balance", "what's my current balance",
+        "how much money do i have", "how much money do i have left", "how much money is in my account",
+        "how much is in my account", "check my balance", "check balance", "account balance", "balance",
+        "my balance", "current balance", "show my balance", "tell me my balance", "net worth",
+        "how much cash do i have", "kitna paisa hai", "mera balance kya hai", "balance kitna hai"
+    }
+    if q_lower in balance_exact or re.search(r"^(?:what(?:'s|\s+is)\s+(?:my\s+)?(?:current\s+)?(?:account\s+)?balance|check\s+(?:my\s+)?(?:current\s+)?balance|how\s+much\s+money\s+do\s+i\s+have(?:\s+left|\s+in\s+my\s+account)?)\??$", q_lower):
+        return {"status": "success", "function_name": "get_balance", "arguments": {}}
+
+    # 5. Missing amount affordability check ("Can I afford it?")
+    if q_lower in ("can i afford it", "can i afford it?", "can i afford this", "can i afford that", "should i buy it", "can i buy it", "is it affordable"):
+        return {
+            "status": "clarification_needed",
+            "question": "How much does the item cost?",
+            "intent": "check_affordability",
+            "extracted_parameters": {},
+        }
+
+    # 6. Unambiguous affordability check with item and amount: "Can I afford <item> for <amount>?"
+    afford_match = re.search(r"^(?:can i afford|can i buy|should i buy)\s+(?:a |an )?([A-Za-z0-9\s]+?)\s+(?:for|costing|at)\s+([₹$]?[0-9,]+(?:\.[0-9]+)?k?|\d+\s*(?:k|grand|thousand))\??$", q_lower)
+    if afford_match:
+        item = afford_match.group(1).strip()
+        amt_str = afford_match.group(2).strip()
+        amt = _parse_amount_value(amt_str)
+        if amt and amt > 0:
+            return {
+                "status": "success",
+                "function_name": "check_affordability",
+                "arguments": {"amount": amt, "item_description": item},
+            }
+
+    # 7. Unambiguous spending summary: "How much did I spend on <category> this/last month?"
+    spend_match = re.search(r"^(?:how much did i spend|what did i spend|how much have i spent)\s+(?:on\s+([A-Za-z]+)\s+)?(this month|last month|this week|last week)\??$", q_lower)
+    if spend_match:
+        cat = spend_match.group(1)
+        period_str = spend_match.group(2)
+        period = "last_month" if "last month" in period_str else ("last_week" if "last week" in period_str else ("this_week" if "this week" in period_str else "this_month"))
+        args = {"period": period}
+        if cat:
+            args["category"] = cat.capitalize()
+        return {
+            "status": "success",
+            "function_name": "get_spending_summary",
+            "arguments": args,
+        }
+
+    return None
 
 
 def route_query(
@@ -562,6 +672,16 @@ def route_query(
             "status": "error",
             "message": "user_id must be provided by the application context.",
         }
+
+    t0 = time.perf_counter()
+
+    # Fast-path deterministic router for unambiguous patterns (0ms latency)
+    if client is None:
+        fast_res = _fast_path_match(query, context=context)
+        if fast_res is not None:
+            fast_res["timing_ms"] = round((time.perf_counter() - t0) * 1000, 2)
+            fast_res["router_mode"] = "FAST_PATH"
+            return fast_res
 
     context = context or {}
     llm_model = model or os.getenv("LLM_MODEL", "gpt-4o-mini")
@@ -811,10 +931,13 @@ def route_query(
             # Inject user_id into arguments via Python (never generated by LLM)
             args["user_id"] = user_id
 
+            dt_ms = round((time.perf_counter() - t0) * 1000, 2)
             return {
                 "status": "success",
                 "function_name": func_name,
                 "arguments": args,
+                "timing_ms": dt_ms,
+                "router_mode": "REAL_LLM",
             }
 
         # If LLM returned text instead of a tool call (clarification or off-topic)

@@ -11,11 +11,17 @@ ARCHITECTURAL PRINCIPLES:
 """
 
 import os
+import time
 from typing import Optional
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from sqlalchemy.orm import Session
 
 from ai.speech_to_text import transcribe_audio, resolve_mime_type, SUPPORTED_MIME_TYPES
-from backend.schemas import TranscribeResponse
+from backend.schemas import TranscribeResponse, VoiceAskResponse
+from backend.db import get_db
+from backend.models.user import User
+from backend.auth.dependencies import get_current_user
+from ai.pipeline import AIPipeline
 
 router = APIRouter(tags=["Voice & Speech"])
 
@@ -63,7 +69,7 @@ async def transcribe_speech(
     1. Receives audio file via multipart form upload.
     2. Validates format (MIME type / extension) and size (<= 25 MB, >= 32 bytes).
     3. Delegates to ai.speech_to_text.transcribe_audio.
-    4. Returns verbatim transcript text.
+    4. Returns verbatim transcript text with latency timing instrumentation.
     """
     upload = audio or file
     if not upload:
@@ -118,6 +124,7 @@ async def transcribe_speech(
             status="success",
             transcript=result["transcript"],
             language=result.get("language", language or "en"),
+            timing_ms=result.get("timing_ms"),
         )
 
     # 4. Handle offline mock fallback if live API credentials are not configured
@@ -128,10 +135,144 @@ async def transcribe_speech(
             status="success",
             transcript=mock_transcript,
             language=language or "en",
+            timing_ms={"stt_total_ms": 0.0},
         )
 
     # 5. Return client error with descriptive message
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail=result.get("message", "Speech transcription failed."),
+    )
+
+
+@router.post(
+    "/voice/ask",
+    response_model=VoiceAskResponse,
+    summary="Unified Direct Voice Query to FinSight Copilot",
+)
+@router.post(
+    "/api/v1/voice/ask",
+    response_model=VoiceAskResponse,
+    include_in_schema=False,
+)
+async def ask_with_voice(
+    audio: Optional[UploadFile] = File(None, description="Audio file upload (primary field)"),
+    file: Optional[UploadFile] = File(None, description="Audio file upload (fallback field)"),
+    language: Optional[str] = Form(None, description="Optional language hint (e.g. 'en', 'hi')"),
+    conversation_id: Optional[str] = Form(None, description="Optional multi-turn conversation session ID"),
+    confirmation_token: Optional[str] = Form(None, description="Optional pending payment confirmation ID or token"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> VoiceAskResponse:
+    """
+    Optimized direct voice interaction pipeline:
+    1. Receives audio and transcribes it in memory.
+    2. Directly forwards transcript into AIPipeline.process_query (voice=True).
+    3. Returns both transcript and full AskResponse in a single client-server roundtrip.
+    Preserves all financial logic, conversational context, grounding, and security.
+    """
+    t_voice_start = time.perf_counter()
+    upload = audio or file
+    if not upload:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No audio file provided. Please upload an audio file using the 'audio' or 'file' form field.",
+        )
+
+    mime_type = resolve_mime_type(
+        content_type=upload.content_type,
+        filename=upload.filename,
+    )
+    if not mime_type:
+        supported_exts = "webm, wav, mp3, m4a, mp4, ogg, flac, aac"
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported audio format '{upload.content_type or upload.filename}'. Supported formats: {supported_exts}.",
+        )
+
+    try:
+        audio_bytes = await upload.read()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to read audio file data: {str(e)}",
+        )
+
+    if not audio_bytes or len(audio_bytes) < 32:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The uploaded audio file is empty or corrupted (minimum 32 bytes required).",
+        )
+
+    if len(audio_bytes) > MAX_AUDIO_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Audio file exceeds the maximum allowed size of {MAX_AUDIO_SIZE // (1024 * 1024)} MB.",
+        )
+
+    # 1. Transcribe via ai.speech_to_text
+    stt_res = transcribe_audio(
+        audio_bytes=audio_bytes,
+        filename=upload.filename,
+        content_type=upload.content_type,
+        language=language,
+    )
+
+    stt_timing = stt_res.get("timing_ms") or {}
+    stt_duration_ms = stt_timing.get("stt_total_ms", 0.0)
+
+    if stt_res.get("status") == "success":
+        transcript = stt_res["transcript"]
+    elif stt_res.get("error_type") == "authentication_error":
+        transcript = _mock_transcription_from_filename(upload.filename)
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=stt_res.get("message", "Speech transcription failed."),
+        )
+
+    # 2. Directly process query in AI pipeline
+    pipeline_res = AIPipeline.process_query(
+        user_id=current_user.id,
+        query=transcript,
+        db=db,
+        confirmation_token=confirmation_token,
+        conversation_id=conversation_id,
+        voice=True,
+    )
+
+    pipe_timing = pipeline_res.get("timing_ms") or {}
+    total_voice_backend_ms = round((time.perf_counter() - t_voice_start) * 1000, 2)
+
+    combined_timing = {
+        "stt_ms": round(stt_duration_ms, 2),
+        "intent_routing_ms": pipe_timing.get("intent_routing_ms", 0.0),
+        "financial_tool_execution_ms": pipe_timing.get("financial_tool_execution_ms", 0.0),
+        "explainer_ms": pipe_timing.get("explainer_ms", 0.0),
+        "pipeline_total_ms": pipe_timing.get("pipeline_total_ms", 0.0),
+        "total_voice_backend_ms": total_voice_backend_ms,
+    }
+
+    facts = pipeline_res.get("structured_facts", {})
+    execution_mode = pipeline_res.get("execution_mode", "MOCK_FALLBACK")
+    conv_status = pipeline_res.get("conversation_status", "completed")
+    if pipeline_res.get("requires_confirmation"):
+        conv_status = "awaiting_confirmation"
+    elif facts.get("status") == "clarification_needed":
+        conv_status = "clarification_needed"
+
+    return VoiceAskResponse(
+        transcript=transcript,
+        intent=pipeline_res.get("intent", "unknown"),
+        answer_text=pipeline_res.get("answer_text", "Processed successfully."),
+        aria_priority=pipeline_res.get("aria_priority", "polite"),
+        requires_confirmation=pipeline_res.get("requires_confirmation", False),
+        confirmation_token=pipeline_res.get("confirmation_token"),
+        pending_payment_id=pipeline_res.get("pending_payment_id"),
+        structured_facts=facts,
+        structured_data=facts,
+        execution_mode=execution_mode,
+        conversation_status=conv_status,
+        conversation_id=pipeline_res.get("conversation_id", conversation_id),
+        timing_ms=combined_timing,
     )

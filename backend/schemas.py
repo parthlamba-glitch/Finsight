@@ -244,6 +244,7 @@ class AskResponse(BaseModel):
     execution_mode: str = Field("MOCK_FALLBACK", description="Execution mode: 'REAL_LLM' or 'MOCK_FALLBACK'")
     conversation_status: str = Field("completed", description="Conversation status: 'completed', 'clarification_needed', or 'awaiting_confirmation'")
     conversation_id: Optional[str] = Field(None, description="Conversation session ID")
+    timing_ms: Optional[Dict[str, float]] = Field(None, description="Structured latency timing breakdown in milliseconds")
 
 
 class TranscribeResponse(BaseModel):
@@ -251,6 +252,12 @@ class TranscribeResponse(BaseModel):
     status: str = Field("success", description="Transcription status")
     transcript: str = Field(..., description="Verbatim transcribed speech text")
     language: Optional[str] = Field("en", description="Detected or requested language code")
+    timing_ms: Optional[Dict[str, float]] = Field(None, description="Structured STT latency breakdown in milliseconds")
+
+
+class VoiceAskResponse(AskResponse):
+    """Consolidated response model for direct voice queries returning both transcript and answer."""
+    transcript: str = Field(..., description="Verbatim transcribed speech text")
 
 
 class PaymentPreviewRequest(BaseModel):

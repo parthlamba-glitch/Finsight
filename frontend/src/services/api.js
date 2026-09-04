@@ -460,4 +460,24 @@ export const api = {
       body: formData,
     });
   },
+
+  /**
+   * Unified voice query: Sends recorded voice audio directly to /voice/ask,
+   * returning both transcript and copilot response in a single network roundtrip.
+   */
+  async askVoice(audioBlob, filename = 'recording.webm', conversationId = null, confirmationToken = null, language = null) {
+    if (!audioBlob) {
+      throw new Error('No audio data provided for voice query.');
+    }
+    const formData = new FormData();
+    formData.append('audio', audioBlob, filename);
+    if (language) formData.append('language', language);
+    if (conversationId) formData.append('conversation_id', conversationId);
+    if (confirmationToken) formData.append('confirmation_token', confirmationToken);
+
+    return request('/voice/ask', {
+      method: 'POST',
+      body: formData,
+    });
+  },
 };

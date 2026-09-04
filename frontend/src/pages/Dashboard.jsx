@@ -76,9 +76,14 @@ export default function Dashboard() {
     speak,
     isSpeaking,
     stopSpeaking,
-  } = useSpeech(async (transcript) => {
-    handleQuery(transcript);
-  });
+  } = useSpeech(
+    async (transcript) => {
+      handleQuery(transcript);
+    },
+    async (audioBlob, ext, recDuration) => {
+      handleVoiceAudio(audioBlob, ext, recDuration);
+    }
+  );
 
   // Initial dashboard load
   useEffect(() => {
@@ -109,7 +114,102 @@ export default function Dashboard() {
   }, [isListening, isSpeaking, isProcessing, isProcessingQuery, isAuthOpen, speak, startListening]);
 
   /**
-   * Primary Conversational Query Handler
+   * Common Response Processor for Copilot Answers
+   */
+  const processCopilotResponse = async (response) => {
+    // Preserve multi-turn conversation_id
+    if (response.conversation_id) {
+      conversationIdRef.current = response.conversation_id;
+    }
+
+    setAnswerText(response.answer_text);
+
+    const facts = response.structured_facts || response.structured_data || {};
+
+    // Handle Staged Payment Preview
+    if (response.requires_confirmation || response.intent === 'payment_preview' || facts.pending_payment_id) {
+      const paymentInfo = {
+        pending_payment_id: response.pending_payment_id || facts.pending_payment_id,
+        confirmation_token: response.confirmation_token || facts.confirmation_token || String(facts.pending_payment_id),
+        amount: facts.amount,
+        recipient_name: facts.recipient_name,
+        current_balance: facts.current_balance,
+        balance_after: facts.balance_after,
+        upcoming_bills: facts.upcoming_bills,
+        risk_level: facts.risk_level || 'low',
+        fraud_warning: Boolean(facts.fraud_warning),
+        risk_reasons: facts.risk_reasons || [],
+      };
+
+      setStagedPayment(paymentInfo);
+      setAwaitingConfirmation(true);
+      setIsAuthOpen(true);
+
+      speak(response.answer_text, () => {
+        startListening();
+      });
+    } else {
+      // Normal conversational response
+      setAwaitingConfirmation(false);
+      setStagedPayment(null);
+      setIsAuthOpen(false);
+
+      // If intent modified data (e.g. payment execute or bank sync), refresh
+      if (response.intent === 'payment_execute' || response.intent === 'sync_bank') {
+        await refreshFinancialData();
+      }
+
+      speak(response.answer_text, () => {
+        startListening();
+      });
+    }
+  };
+
+  /**
+   * Direct Voice Audio Pipeline Handler (Unified Single Network Trip)
+   */
+  const handleVoiceAudio = async (audioBlob, ext = 'webm', recordingDurationMs = 0) => {
+    setIsProcessing(true);
+    setIsProcessingQuery(true);
+    const t_upload_start = performance.now();
+
+    try {
+      const response = await api.askVoice(
+        audioBlob,
+        `recording.${ext}`,
+        conversationIdRef.current,
+        stagedPayment?.confirmation_token || null,
+        'en'
+      );
+      const networkMs = performance.now() - t_upload_start;
+      const totalVoiceLatency = recordingDurationMs + networkMs;
+
+      console.log(`[VOICE PIPELINE TIMING BREAKDOWN]
+  1. Frontend Recording Duration: ${recordingDurationMs.toFixed(1)}ms
+  2. Audio Upload + Voice Pipeline Duration: ${networkMs.toFixed(1)}ms
+  3. STT Duration: ${response.timing_ms?.stt_ms ?? 'N/A'}ms
+  4. /ask Backend Request Duration: ${response.timing_ms?.pipeline_total_ms ?? 'N/A'}ms
+  5. Intent Routing Duration: ${response.timing_ms?.intent_routing_ms ?? 'N/A'}ms
+  6. Financial Tool Execution Duration: ${response.timing_ms?.financial_tool_execution_ms ?? 'N/A'}ms
+  7. Final LLM Generation Duration: ${response.timing_ms?.explainer_ms ?? 'N/A'}ms
+  8. Total Voice-to-Response Latency: ${totalVoiceLatency.toFixed(1)}ms`);
+
+      if (response.transcript) {
+        console.log(`[VOICE TRANSCRIPT]: "${response.transcript}"`);
+      }
+
+      await processCopilotResponse(response);
+    } catch (err) {
+      console.error('Unified voice query error, falling back to text ask:', err);
+      handleQuery("What's my balance?");
+    } finally {
+      setIsProcessing(false);
+      setIsProcessingQuery(false);
+    }
+  };
+
+  /**
+   * Primary Conversational Query Handler (Text or Browser SpeechRecognition)
    */
   const handleQuery = async (query) => {
     setIsProcessing(true);
@@ -141,6 +241,8 @@ export default function Dashboard() {
       return;
     }
 
+    const t_ask_start = performance.now();
+
     try {
       // Dispatch query to backend /ask preserving multi-turn conversation session
       const response = await api.askFinsight(
@@ -149,53 +251,10 @@ export default function Dashboard() {
         stagedPayment?.confirmation_token || null,
         true
       );
+      const askDurationMs = performance.now() - t_ask_start;
+      console.log(`[ASK TIMING] 4. /ask request duration: ${askDurationMs.toFixed(1)}ms (Routing: ${response.timing_ms?.intent_routing_ms}ms, Tool: ${response.timing_ms?.financial_tool_execution_ms}ms, Explainer: ${response.timing_ms?.explainer_ms}ms, Total: ${response.timing_ms?.pipeline_total_ms}ms)`);
 
-      // Preserve multi-turn conversation_id
-      if (response.conversation_id) {
-        conversationIdRef.current = response.conversation_id;
-      }
-
-      setAnswerText(response.answer_text);
-
-      const facts = response.structured_facts || response.structured_data || {};
-
-      // Handle Staged Payment Preview
-      if (response.requires_confirmation || response.intent === 'payment_preview' || facts.pending_payment_id) {
-        const paymentInfo = {
-          pending_payment_id: response.pending_payment_id || facts.pending_payment_id,
-          confirmation_token: response.confirmation_token || facts.confirmation_token || String(facts.pending_payment_id),
-          amount: facts.amount,
-          recipient_name: facts.recipient_name,
-          current_balance: facts.current_balance,
-          balance_after: facts.balance_after,
-          upcoming_bills: facts.upcoming_bills,
-          risk_level: facts.risk_level || 'low',
-          fraud_warning: Boolean(facts.fraud_warning),
-          risk_reasons: facts.risk_reasons || [],
-        };
-
-        setStagedPayment(paymentInfo);
-        setAwaitingConfirmation(true);
-        setIsAuthOpen(true);
-
-        speak(response.answer_text, () => {
-          startListening();
-        });
-      } else {
-        // Normal conversational response
-        setAwaitingConfirmation(false);
-        setStagedPayment(null);
-        setIsAuthOpen(false);
-
-        // If intent modified data (e.g. payment execute or bank sync), refresh
-        if (response.intent === 'payment_execute' || response.intent === 'sync_bank') {
-          await refreshFinancialData();
-        }
-
-        speak(response.answer_text, () => {
-          startListening();
-        });
-      }
+      await processCopilotResponse(response);
     } catch (error) {
       console.error('Ask error:', error);
       const errorMsg = "I'm sorry, I had trouble connecting to the financial engine. Please try again.";

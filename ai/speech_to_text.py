@@ -15,12 +15,22 @@ Architectural Boundary & Invariants:
 import base64
 import os
 import re
+import time
 from typing import Any, Dict, Optional
 # pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 import httpx
 
 load_dotenv()
+
+# Global persistent HTTP client with connection pooling
+_persistent_client: Optional[httpx.Client] = None
+
+def get_http_client() -> httpx.Client:
+    global _persistent_client
+    if _persistent_client is None or _persistent_client.is_closed:
+        _persistent_client = httpx.Client(timeout=30.0)
+    return _persistent_client
 
 # Supported MIME types and file extension mappings
 SUPPORTED_MIME_TYPES = {
@@ -201,6 +211,8 @@ def transcribe_audio(
     # Clean model identifier
     clean_model = active_model.replace("models/", "")
 
+    t_start = time.perf_counter()
+
     # 4. Construct Gemini REST payload with inline base64 audio
     try:
         b64_audio = base64.b64encode(audio_bytes).decode("utf-8")
@@ -210,6 +222,8 @@ def transcribe_audio(
             "error_type": "corrupt_audio",
             "message": f"Failed to encode audio data: {str(e)}",
         }
+
+    t_b64 = time.perf_counter()
 
     prompt_text = STT_SYSTEM_PROMPT
     if language:
@@ -239,14 +253,23 @@ def transcribe_audio(
         },
     }
 
-    # 5. Execute HTTP request with robust error handling
+    # 5. Execute HTTP request using persistent client with robust error handling
     try:
-        with httpx.Client(timeout=30.0) as client:
-            response = client.post(endpoint_url, json=payload)
+        client = get_http_client()
+        response = client.post(endpoint_url, json=payload)
+        t_api = time.perf_counter()
+
+        timing_data = {
+            "b64_ms": round((t_b64 - t_start) * 1000, 2),
+            "gemini_stt_ms": round((t_api - t_b64) * 1000, 2),
+            "stt_total_ms": round((t_api - t_start) * 1000, 2),
+        }
 
         # Handle HTTP status codes
         if response.status_code == 200:
-            return _parse_gemini_response(response.json(), requested_language=language)
+            parsed = _parse_gemini_response(response.json(), requested_language=language)
+            parsed["timing_ms"] = timing_data
+            return parsed
 
         if response.status_code in (401, 403):
             return {

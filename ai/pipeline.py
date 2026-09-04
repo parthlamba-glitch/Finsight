@@ -19,6 +19,7 @@ from decimal import Decimal
 import logging
 import os
 import re
+import time
 from typing import Any, Callable, Dict, Optional, Union
 import uuid
 from openai import OpenAI
@@ -132,7 +133,10 @@ class AIPipeline:
                 "execution_mode": "MOCK_FALLBACK",
                 "conversation_status": "completed",
                 "conversation_id": conversation_id,
+                "timing_ms": {"pipeline_total_ms": 0.0},
             }
+
+        t_pipeline_start = time.perf_counter()
 
         # 1. Retrieve multi-turn context
         conv_context = conversation_manager.get_context(conversation_id)
@@ -151,11 +155,13 @@ class AIPipeline:
             )
 
         # 3. Intent Routing via LLMClient
+        t_route_start = time.perf_counter()
         intent_info, route_err = LLMClient.call_tool_router(
             query=query,
             user_id=str(user_id),
             context=conv_context,
         )
+        router_ms = (time.perf_counter() - t_route_start) * 1000
 
         status = intent_info.get("status")
 
@@ -313,12 +319,14 @@ class AIPipeline:
             or args.get("pending_payment_id")
         )
 
+        t_dispatch_start = time.perf_counter()
         dispatcher_result = dispatch_intent(
             user_id=user_id,
             intent_data=intent_data,
             db=db,
             confirmation_token=str(token_to_pass) if token_to_pass is not None else None,
         )
+        dispatch_ms = (time.perf_counter() - t_dispatch_start) * 1000
 
         # 9. Handle Clarifications Returned by Backend Dispatcher
         if dispatcher_result.get("status") == "clarification_needed":
@@ -345,13 +353,21 @@ class AIPipeline:
                 "execution_mode": execution_mode,
                 "conversation_status": "clarification_needed",
                 "conversation_id": conversation_id,
+                "timing_ms": {
+                    "intent_routing_ms": round(router_ms, 2),
+                    "financial_tool_execution_ms": round(dispatch_ms, 2),
+                    "explainer_ms": 0.0,
+                    "pipeline_total_ms": round((time.perf_counter() - t_pipeline_start) * 1000, 2),
+                },
             }
 
         # 10. Generate Grounded Explanation from Authoritative Facts
+        t_explain_start = time.perf_counter()
         answer_text, aria_priority, exp_err = LLMClient.explain_facts(
             engine_facts=dispatcher_result,
             user_query=query,
         )
+        explainer_ms = (time.perf_counter() - t_explain_start) * 1000
 
         # Ensure payment execute narration explicitly contains completion confirmation
         if func_name == "payment_execute" and dispatcher_result.get("status") == "executed":
@@ -383,6 +399,19 @@ class AIPipeline:
         if dispatcher_result.get("fraud_warning") or dispatcher_result.get("risk_level") == "high":
             aria_priority = "assertive"
 
+        total_pipeline_ms = (time.perf_counter() - t_pipeline_start) * 1000
+        timing_data = {
+            "intent_routing_ms": round(router_ms, 2),
+            "financial_tool_execution_ms": round(dispatch_ms, 2),
+            "explainer_ms": round(explainer_ms, 2),
+            "pipeline_total_ms": round(total_pipeline_ms, 2),
+        }
+        logger.info(
+            f"[AI Pipeline Timing] query='{query[:35]}' routing={timing_data['intent_routing_ms']}ms "
+            f"engine={timing_data['financial_tool_execution_ms']}ms explainer={timing_data['explainer_ms']}ms "
+            f"total={timing_data['pipeline_total_ms']}ms"
+        )
+
         return {
             "intent": func_name,
             "answer_text": answer_text,
@@ -395,6 +424,7 @@ class AIPipeline:
             "execution_mode": execution_mode,
             "conversation_status": conv_status,
             "conversation_id": conversation_id,
+            "timing_ms": timing_data,
         }
 
 
