@@ -698,9 +698,9 @@ Docker Compose
 
 ### FinSight
 
-**Parth Lamba**  
-**Dishita Singh**
-**Harsh Vats**
+**Parth Lamba**  <br>
+**Dishita Singh** <br>
+**Harsh Vats** <br>
 **Sushant Chaudhary**
 
 ---
