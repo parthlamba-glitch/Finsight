@@ -29,3 +29,5 @@ frontend/.vite
 .idea
 
 *.whl
+
+.env

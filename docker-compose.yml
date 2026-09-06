@@ -19,11 +19,16 @@ services:
       args:
         VITE_API_BASE_URL: /svc/api
     container_name: finsight-frontend
+    volumes:
+      - "/var/www/certbot:/var/www/certbot:ro"
+      - "/etc/letsencrypt/live/15.252.70.129:/etc/letsencrypt/live/15.252.70.129:ro"
+      - "/etc/letsencrypt/archive/15.252.70.129:/etc/letsencrypt/archive/15.252.70.129:ro"
     restart: unless-stopped
     depends_on:
       - backend
     ports:
-      - "8080:80"
+      - "80:80"
+      - "443:443"
 
 volumes:
   finsight-data:
