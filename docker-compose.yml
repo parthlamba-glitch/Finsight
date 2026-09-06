@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: finsight-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: sqlite:////data/finsight.db
+    volumes:
+      - finsight-data:/data
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: /svc/api
+    container_name: finsight-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  finsight-data:
